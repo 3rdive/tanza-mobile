@@ -1,10 +1,12 @@
 // src/redux/redux.ts
+import resetSlice from "@/redux/slices/resetSlice";
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 
 export const store = configureStore({
  reducer: {
 	auth: authReducer,
+	reset: resetSlice,
  },
 });
 

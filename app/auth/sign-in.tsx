@@ -199,7 +199,9 @@ export default function SignInScreen() {
 
 		 {/* Forgot Password */}
 		 {showPassword && !isLoading && (
-			 <TouchableOpacity style={styles.forgotPasswordButton}>
+			 <TouchableOpacity style={styles.forgotPasswordButton}
+			 onPress={() => router.push('/auth/reset_password/forgotten-password')}
+			 >
 				<Text style={styles.forgotPasswordText}>Forgot password?</Text>
 			 </TouchableOpacity>
 		 )}

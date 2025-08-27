@@ -1,3 +1,4 @@
+import { clearResetState, setResetMobile, setResetOtp, setResetPassword } from "@/redux/slices/resetSlice";
 import arg from "arg";
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState, AppDispatch } from '../store'
@@ -19,5 +20,20 @@ export function useAuthFlow(){
   setEmail: (arg: string) => dispatch(setEmail(arg)),
   setMobile: (arg: string) => dispatch(setMobile(arg)),
   clearState: () => dispatch(clearState())
+ }
+}
+
+export function usePasswordResetFlow(){
+ const dispatch = useAppDispatch()
+ const state = useAppSelector(state => state.reset);
+
+ return {
+  mobile: state.mobile,
+  otp: state.otp,
+  password: state.password,
+  setPassword: (arg: string) => dispatch(setResetPassword(arg)),
+  setOtp: (arg: string) => dispatch(setResetOtp(arg)),
+  setMobile: (arg: string) => dispatch(setResetMobile(arg)),
+  clearState: () => dispatch(clearResetState())
  }
 }

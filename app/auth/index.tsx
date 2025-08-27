@@ -20,7 +20,7 @@ export default function OnboardingScreen() {
 		<View style={styles.content}>
 		 <View style={styles.imageContainer}>
 			<Image
-				source={require('@/assets/images/auth/onboarding.png')}
+				source={require('@/assets/images/auth/onboarding.jpg')}
 				style={styles.heroImage}
 				resizeMode="cover"
 			/>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
  },
  heroImage: {
 	width: width * 0.8,
-	height: height * 0.4,
+	height: height * 0.6,
 	borderRadius: 20,
  },
  textContainer: {
