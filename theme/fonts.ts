@@ -1,6 +1,6 @@
-export const manropeFonts = {
- regular: "Manrope_400Regular",
- medium: "Manrope_500Medium",
- semiBold: "Manrope_600SemiBold",
- bold: "Manrope_700Bold",
+export const poppinsFonts = {
+  regular: "Poppins_400Regular",
+  medium: "Poppins_500Medium",
+  semiBold: "Poppins_600SemiBold",
+  bold: "Poppins_700Bold",
 };
