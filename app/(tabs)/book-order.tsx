@@ -11,8 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { poppinsFonts } from "../../theme/fonts";
 import { RFValue } from "react-native-responsive-fontsize";
+import { poppinsFonts } from "../../theme/fonts";
 
 const UI_SCALE = 0.82; // globally downscale sizes
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -374,12 +374,12 @@ export default function BookLogisticsScreen() {
         </Animated.View>
 
         <View style={styles.priceContainer}>
-				 <View>
+          <View>
             <Text style={[styles.price, { color: "black" }]}>
               ₦{calculatedPrice?.toLocaleString() || 0}
             </Text>
-					<Text style={styles.amountSubtitle}>TOTAL AMOUNT</Text>
-				 </View>
+            <Text style={styles.amountSubtitle}>TOTAL AMOUNT</Text>
+          </View>
           <TouchableOpacity
             onPress={handleBooking}
             disabled={
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#eee",
     shadowOffset: { width: 0, height: 4 },
-	 padding: 10,
+    padding: 10,
     shadowOpacity: 0.15,
     shadowRadius: 8,
   },
@@ -725,9 +725,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontFamily: poppinsFonts.bold,
   },
- amountSubtitle: {
-	 textDecorationLine: "underline",
-	fontSize: rs(13),
-	fontWeight: "bold",
- }
+  amountSubtitle: {
+    textDecorationLine: "underline",
+    fontSize: rs(13),
+    fontWeight: "bold",
+  },
 });

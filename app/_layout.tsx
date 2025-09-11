@@ -1,11 +1,18 @@
 import AuthStack from "@/app/auth-stacks";
 import { ReduxProvider } from "@/redux/redux-provider";
-import { Stack } from "expo-router";
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  useFonts,
+} from "@expo-google-fonts/poppins";
+import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo } from "react";
 import { Text, TextInput } from "react-native";
-import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins";
 
+SplashScreen.hide();
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -18,7 +25,10 @@ export default function RootLayout() {
   useMemo(() => {
     if (!fontsLoaded) return;
     const pickPoppins = (style: any) => {
-      const weight = (Array.isArray(style) ? style.find((s) => s && s.fontWeight)?.fontWeight : style?.fontWeight) || "400";
+      const weight =
+        (Array.isArray(style)
+          ? style.find((s) => s && s.fontWeight)?.fontWeight
+          : style?.fontWeight) || "400";
       switch (String(weight)) {
         case "700":
         case "bold":
@@ -37,11 +47,11 @@ export default function RootLayout() {
     const override = (Base: any) => {
       const defaultRender = Base.render ? Base.render : Base;
       const Wrapped = function (...args: any[]) {
-        const origin = defaultRender.apply(this, args);
+        const origin = defaultRender.apply(null, args);
         const originStyle = origin.props?.style;
         const fontFamily = pickPoppins(originStyle);
         return React.cloneElement(origin, {
-          style: [ { fontFamily }, originStyle ],
+          style: [{ fontFamily }, originStyle],
         });
       };
       // @ts-ignore
@@ -52,11 +62,6 @@ export default function RootLayout() {
     override(TextInput);
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
-    // Optionally, render nothing or a bare container while fonts load
-    return null;
-  }
-
   return (
     <ReduxProvider>
       <StatusBar style="auto" />
@@ -64,7 +69,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            headerTintColor: '#fff',
+            headerTintColor: "#fff",
           }}
         >
           <Stack.Screen name="index" />

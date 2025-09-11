@@ -9,7 +9,7 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold_Italic,
   Poppins_800ExtraBold,
- useFonts
+  useFonts,
 } from "@expo-google-fonts/poppins";
 import { router } from "expo-router";
 import React, { useEffect, useRef } from "react";

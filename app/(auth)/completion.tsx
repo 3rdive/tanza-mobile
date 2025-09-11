@@ -1,23 +1,22 @@
 // CompleteInfoScreen.tsx
 import { authService } from "@/lib/api";
+import { rs } from "@/lib/functions";
 import { useAuthFlow, useUser } from "@/redux/hooks/hooks";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
- ActivityIndicator,
- Alert,
- SafeAreaView,
- ScrollView,
- StyleSheet,
- Text,
- TextInput,
- TouchableOpacity,
- View,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 
-const UI_SCALE = 0.82;
-const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
 
 export default function CompleteInfoScreen() {
   const { email, mobile, otp } = useAuthFlow();
@@ -25,7 +24,7 @@ export default function CompleteInfoScreen() {
   const [lastName, setLastName] = useState("");
   const [password, setPassword] = useState("");
   const { setUser } = useUser();
-	const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   console.log("otp", otp);
 
@@ -39,7 +38,7 @@ export default function CompleteInfoScreen() {
       return;
     }
 
-		setIsLoading(true)
+    setIsLoading(true);
 
     try {
       const payload = {
@@ -65,9 +64,9 @@ export default function CompleteInfoScreen() {
         e?.message ||
         "An error occurred during sign up";
       Alert.alert("Error", msg);
-    }finally {
-		 setIsLoading(false)
-		}
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -146,11 +145,18 @@ export default function CompleteInfoScreen() {
           onPress={handleComplete}
           disabled={!isFormValid()}
         >
-				 {isLoading ?<ActivityIndicator /> : <Text
-					 style={ [styles.completeText, !isFormValid() && styles.disabledText] }
-				 >
-					Complete Setup
-				 </Text> }
+          {isLoading ? (
+            <ActivityIndicator />
+          ) : (
+            <Text
+              style={[
+                styles.completeText,
+                !isFormValid() && styles.disabledText,
+              ]}
+            >
+              Complete Setup
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -199,7 +205,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   input: {
-	 color: "black",
+    color: "black",
     borderWidth: rs(2),
     borderColor: "#e0e0e0",
     borderRadius: rs(12),

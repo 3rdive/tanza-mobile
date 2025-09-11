@@ -1,8 +1,18 @@
+import { rs } from "@/lib/functions";
 import { useUser } from "@/redux/hooks/hooks";
-import { useMemo, useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { usePaystack } from "react-native-paystack-webview";
+import { poppinsFonts } from "@/theme/fonts";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
+import {
+  Alert,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { usePaystack } from "react-native-paystack-webview";
 
 export const PaystackButton = () => {
   const [amount, setAmount] = useState<number>(0);
@@ -17,11 +27,10 @@ export const PaystackButton = () => {
     return isNaN(n) ? 0 : Math.floor(n);
   }, [input]);
 
-
-	const handleClose = () => {
-	 setSubmitting(false);
-	 setVisible(false);
-	}
+  const handleClose = () => {
+    setSubmitting(false);
+    setVisible(false);
+  };
   const openPayment = () => {
     if (!parsedAmount || parsedAmount <= 0) {
       Alert.alert("Enter amount", "Please enter a valid amount to continue.");
@@ -29,39 +38,50 @@ export const PaystackButton = () => {
     }
     setSubmitting(true);
     setAmount(parsedAmount);
-    popup
-      .newTransaction({
-        email: user?.email || process.env.EXPO_PUBLIC_APP_EMAIL!,
-        reference: `TZTX-${Date.now()}`,
-        amount: parsedAmount,
-        onSuccess: (response) => {
-          console.log("payment-response: ", response);
-          handleClose()
-        },
-        onCancel: () => {
-          console.log("payment-cancelled");
-					handleClose()
-        },
-        onError: (error) => {
-          console.log("payment-error: ", error);
-          Alert.alert("Payment error", "Something went wrong starting the payment. Please try again.");
-					handleClose()
-        },
-        onLoad: (res) => {
-          console.log("payment-modal-loaded: ", res);
-					handleClose()
-        },
-      })
+    popup.newTransaction({
+      email: user?.email || process.env.EXPO_PUBLIC_APP_EMAIL!,
+      reference: `TZTX-${Date.now()}`,
+      amount: parsedAmount,
+      onSuccess: (response) => {
+        console.log("payment-response: ", response);
+        handleClose();
+      },
+      onCancel: () => {
+        console.log("payment-cancelled");
+        handleClose();
+      },
+      onError: (error) => {
+        console.log("payment-error: ", error);
+        Alert.alert(
+          "Payment error",
+          "Something went wrong starting the payment. Please try again."
+        );
+        handleClose();
+      },
+      onLoad: (res) => {
+        console.log("payment-modal-loaded: ", res);
+        handleClose();
+      },
+    });
   };
 
   return (
     <View>
-      <Pressable style={styles.button} onPress={() => setVisible(true)} accessibilityRole="button">
+      <Pressable
+        style={styles.button}
+        onPress={() => setVisible(true)}
+        accessibilityRole="button"
+      >
         <Text style={styles.buttonText}>More Payment Option</Text>
         <Ionicons name="arrow-forward" size={18} color="#fff" />
       </Pressable>
 
-      <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setVisible(false)}
+      >
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
             <Text style={styles.title}>Enter amount</Text>
@@ -75,15 +95,24 @@ export const PaystackButton = () => {
               editable={!submitting}
             />
             <View style={styles.row}>
-              <Pressable style={[styles.secondaryBtn]} onPress={() => setVisible(false)} disabled={submitting}>
+              <Pressable
+                style={[styles.secondaryBtn]}
+                onPress={() => setVisible(false)}
+                disabled={submitting}
+              >
                 <Text style={styles.secondaryText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.primaryBtn, (!parsedAmount || submitting) && styles.disabled]}
+                style={[
+                  styles.primaryBtn,
+                  (!parsedAmount || submitting) && styles.disabled,
+                ]}
                 onPress={openPayment}
                 disabled={!parsedAmount || submitting}
               >
-                <Text style={styles.primaryText}>{submitting ? "Please wait..." : "Next"}</Text>
+                <Text style={styles.primaryText}>
+                  {submitting ? "Please wait..." : "Next"}
+                </Text>
                 <Ionicons name="arrow-forward" size={16} color="#fff" />
               </Pressable>
             </View>
@@ -99,12 +128,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#1a73e8",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: "#00B624",
+    paddingVertical: rs(12),
+    marginBottom: rs(26),
+    paddingHorizontal: rs(16),
     borderRadius: 10,
+    boxShadow: "rgba(100, 100, 111, 0.2) 0px 7px 29px 0px",
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonText: {
+    color: "#fff",
+    fontSize: rs(13),
+    flex: 1,
+    justifyContent: "center",
+    fontFamily: poppinsFonts.semiBold,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -112,18 +149,18 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: "#fff",
-    padding: 16,
+    padding: rs(16),
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
-  title: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+  title: { fontSize: rs(18), fontWeight: "700", marginBottom: 12 },
   input: {
     borderWidth: 1,
     borderColor: "#e0e0e0",
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+    paddingHorizontal: rs(12),
+    paddingVertical: rs(10),
+    fontSize: rs(16),
     marginBottom: 16,
   },
   row: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
@@ -131,7 +168,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: "#dadce0",
-    paddingVertical: 12,
+    paddingVertical: rs(12),
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -143,8 +180,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1a73e8",
-    paddingVertical: 12,
+    backgroundColor: "#00B624",
+    paddingVertical: rs(12),
     borderRadius: 10,
     gap: 8,
   },

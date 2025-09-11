@@ -139,7 +139,7 @@ export default function SignInScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} >
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView style={styles.container}>
         <View style={styles.content}>
           {showPassword && (
@@ -396,9 +396,7 @@ const styles = StyleSheet.create({
     color: "#666",
     lineHeight: rs(22),
   },
-  formContainer: {
-
-  },
+  formContainer: {},
   inputContainer: {
     marginBottom: rs(24),
   },
@@ -409,7 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   input: {
-	 color: "black",
+    color: "black",
     borderWidth: rs(2),
     borderColor: "#e0e0e0",
     borderRadius: rs(12),

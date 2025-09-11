@@ -1,6 +1,11 @@
-import React, { useEffect } from "react";
 import { useUser } from "@/redux/hooks/hooks";
-import { useRootNavigationState, useRouter, useSegments, Stack } from "expo-router";
+import {
+  Stack,
+  useRootNavigationState,
+  useRouter,
+  useSegments,
+} from "expo-router";
+import React, { useEffect } from "react";
 
 // Define props so that children must be a <Stack> element from expo-router
 type AuthStackProps = {

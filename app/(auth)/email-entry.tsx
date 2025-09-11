@@ -64,7 +64,7 @@ export default function EmailEntryScreen() {
   useEffect(() => {
     if (!mobile) {
       clearState();
-      router.replace("/auth/mobile-entry");
+      router.replace("/(auth)/mobile-entry");
     }
   }, [mobile]);
 

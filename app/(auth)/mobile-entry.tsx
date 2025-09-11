@@ -21,7 +21,7 @@ import {
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
-const rs = (n: number) => RFValue((n) * UI_SCALE);
+const rs = (n: number) => RFValue(n * UI_SCALE);
 
 export default function MobileEntryScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -71,7 +71,7 @@ export default function MobileEntryScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-				style={styles.container}
+        style={styles.container}
       >
         <View style={styles.content}>
           <Text style={styles.title}>Enter your mobile number</Text>
@@ -185,14 +185,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
     marginBottom: rs(8),
-	 fontFamily: poppinsFonts.bold
+    fontFamily: poppinsFonts.bold,
   },
   subtitle: {
     fontSize: rs(18),
     color: "#666",
     marginBottom: rs(40),
     lineHeight: rs(22),
-	  fontFamily: poppinsFonts.regular
+    fontFamily: poppinsFonts.regular,
   },
   phoneContainer: {
     flexDirection: "row",

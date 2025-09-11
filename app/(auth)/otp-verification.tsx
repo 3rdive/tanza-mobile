@@ -142,7 +142,7 @@ export default function OTPVerificationScreen() {
           style={styles.changeNumberButton}
           onPress={() => {
             clearState();
-            router.replace("/auth/mobile-entry");
+            router.replace("/(auth)/mobile-entry");
           }}
         >
           <Text style={styles.changeNumberText}>

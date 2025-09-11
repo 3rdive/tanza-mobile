@@ -91,41 +91,50 @@ export default function HomeScreen() {
   };
 
   const TransactionItem = ({ transaction }: { transaction: any }) => (
-		<TouchableOpacity onPress={() => router.push(`/transactions/${transaction.id}`)}>
-   	 <View style={styles.transactionItem}>
-      <View style={styles.transactionIconContainer}>
-        <Text style={styles.transactionIcon} allowFontScaling={false}>
-          {getTransactionIcon(transaction.type)}
+    <TouchableOpacity
+      onPress={() => router.push(`/transactions/${transaction.id}`)}
+    >
+      <View style={styles.transactionItem}>
+        <View style={styles.transactionIconContainer}>
+          <Text style={styles.transactionIcon} allowFontScaling={false}>
+            {getTransactionIcon(transaction.type)}
+          </Text>
+        </View>
+        <View style={styles.transactionDetails}>
+          <Text style={styles.transactionTitle} allowFontScaling={false}>
+            {transaction.title}
+          </Text>
+          <Text style={styles.transactionSubtitle} allowFontScaling={false}>
+            {transaction.subtitle}
+          </Text>
+          <Text style={styles.transactionDate} allowFontScaling={false}>
+            {transaction.date}
+          </Text>
+        </View>
+        <Text
+          style={[
+            styles.transactionAmount,
+            transaction.amount > 0
+              ? styles.positiveAmount
+              : styles.negativeAmount,
+          ]}
+          allowFontScaling={false}
+        >
+          {transaction.amount > 0 ? "+" : ""}₦
+          {Math.abs(transaction.amount).toLocaleString()}
         </Text>
       </View>
-      <View style={styles.transactionDetails}>
-        <Text style={styles.transactionTitle} allowFontScaling={false}>{transaction.title}</Text>
-        <Text style={styles.transactionSubtitle} allowFontScaling={false}>{transaction.subtitle}</Text>
-        <Text style={styles.transactionDate} allowFontScaling={false}>{transaction.date}</Text>
-      </View>
-      <Text
-        style={[
-          styles.transactionAmount,
-          transaction.amount > 0
-            ? styles.positiveAmount
-            : styles.negativeAmount,
-        ]}
-        allowFontScaling={false}
-      >
-        {transaction.amount > 0 ? "+" : ""}₦
-        {Math.abs(transaction.amount).toLocaleString()}
-      </Text>
-    </View>
-		</TouchableOpacity>
-
-	);
+    </TouchableOpacity>
+  );
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00B624" />
-          <Text style={styles.loadingText} allowFontScaling={false}>Loading your dashboard...</Text>
+          <Text style={styles.loadingText} allowFontScaling={false}>
+            Loading your dashboard...
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -137,29 +146,41 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            <Text style={styles.greeting} allowFontScaling={false}>Good morning</Text>
-            <Text style={styles.userName} allowFontScaling={false}>{userName}</Text>
+            <Text style={styles.greeting} allowFontScaling={false}>
+              Good morning
+            </Text>
+            <Text style={styles.userName} allowFontScaling={false}>
+              {userName}
+            </Text>
           </View>
           <TouchableOpacity style={styles.profileButton}>
-            <Text style={styles.profileIcon} allowFontScaling={false}>👤</Text>
+            <Text style={styles.profileIcon} allowFontScaling={false}>
+              👤
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Wallet Balance Card */}
         <View style={styles.balanceCard}>
           <View style={styles.balanceHeader}>
-            <Text style={styles.balanceLabel} allowFontScaling={false}>Wallet Balance</Text>
+            <Text style={styles.balanceLabel} allowFontScaling={false}>
+              Wallet Balance
+            </Text>
             <TouchableOpacity
               style={styles.addMoneyButton}
               onPress={() => router.push("/payment")}
             >
-              <Text style={styles.addMoneyText} allowFontScaling={false}>+ Add Money</Text>
+              <Text style={styles.addMoneyText} allowFontScaling={false}>
+                + Add Money
+              </Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.balanceAmount} allowFontScaling={false}>
             ₦{walletBalance.toLocaleString()}
           </Text>
-          <Text style={styles.balanceSubtext} allowFontScaling={false}>Available for transactions</Text>
+          <Text style={styles.balanceSubtext} allowFontScaling={false}>
+            Available for transactions
+          </Text>
         </View>
 
         {/* Action Buttons */}
@@ -169,9 +190,13 @@ export default function HomeScreen() {
             onPress={() => router.push("/book-order")}
           >
             <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon} allowFontScaling={false}>📦</Text>
+              <Text style={styles.actionIcon} allowFontScaling={false}>
+                📦
+              </Text>
             </View>
-            <Text style={styles.actionText} allowFontScaling={false}>Send Package</Text>
+            <Text style={styles.actionText} allowFontScaling={false}>
+              Send Package
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -179,16 +204,26 @@ export default function HomeScreen() {
             onPress={() => router.push("/book-order")}
           >
             <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon} allowFontScaling={false}>📥</Text>
+              <Text style={styles.actionIcon} allowFontScaling={false}>
+                📥
+              </Text>
             </View>
-            <Text style={styles.actionText} allowFontScaling={false}>Receive Package</Text>
+            <Text style={styles.actionText} allowFontScaling={false}>
+              Receive Package
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Info Card */}
         <View style={styles.infoCard}>
           <View style={styles.infoContent}>
-            <Text style={styles.infoTitle} allowFontScaling={false} maxFontSizeMultiplier={1}>Did you know?</Text>
+            <Text
+              style={styles.infoTitle}
+              allowFontScaling={false}
+              maxFontSizeMultiplier={1}
+            >
+              Did you know?
+            </Text>
             <Text style={styles.infoText} allowFontScaling={false}>
               You can fund your account via bank transfer for free
             </Text>
@@ -196,7 +231,9 @@ export default function HomeScreen() {
               style={styles.fundWalletButton}
               onPress={() => router.push("/payment")}
             >
-              <Text style={styles.fundWalletText} allowFontScaling={false}>Fund Wallet</Text>
+              <Text style={styles.fundWalletText} allowFontScaling={false}>
+                Fund Wallet
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -204,16 +241,23 @@ export default function HomeScreen() {
         {/* Recent Transactions */}
         <View style={styles.recentSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle} allowFontScaling={false}>Recent Transactions</Text>
+            <Text style={styles.sectionTitle} allowFontScaling={false}>
+              Recent Transactions
+            </Text>
             <TouchableOpacity onPress={() => router.push("/history")}>
-              <Text style={styles.seeAllText} allowFontScaling={false}>See all</Text>
+              <Text style={styles.seeAllText} allowFontScaling={false}>
+                See all
+              </Text>
             </TouchableOpacity>
           </View>
 
           {transactionsLoading ? (
             <View style={styles.transactionsLoading}>
               <ActivityIndicator size="small" color="#00B624" />
-              <Text style={styles.loadingTransactionsText} allowFontScaling={false}>
+              <Text
+                style={styles.loadingTransactionsText}
+                allowFontScaling={false}
+              >
                 Loading transactions...
               </Text>
             </View>
@@ -228,8 +272,12 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon} allowFontScaling={false}>📋</Text>
-              <Text style={styles.emptyStateText} allowFontScaling={false}>No recent transactions</Text>
+              <Text style={styles.emptyStateIcon} allowFontScaling={false}>
+                📋
+              </Text>
+              <Text style={styles.emptyStateText} allowFontScaling={false}>
+                No recent transactions
+              </Text>
               <Text style={styles.emptyStateSubtext} allowFontScaling={false}>
                 Your transaction history will appear here
               </Text>
