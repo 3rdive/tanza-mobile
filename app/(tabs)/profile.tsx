@@ -19,14 +19,14 @@ const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue(n * UI_SCALE);
 
 export default function ProfileScreen() {
-  const { logOut } = useUser();
-  const [userProfile] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phoneNumber: "+234 801 234 5678",
-    profileImage: null,
-  });
+  const { logOut, user } = useUser();
+  const firstName = (user as any)?.firstName || "John";
+  const lastName = (user as any)?.lastName || "Doe";
+  const email = (user as any)?.email || "john.doe@example.com";
+  const mobile = (user as any)?.mobile || "";
+  const countryCode = (user as any)?.countryCode || "+234";
+  const profileImage = (user as any)?.profilePic || null;
+  const phoneNumber = mobile ? `${countryCode}${mobile}` : "";
 
   const handleEditProfile = () => {
     router.push("/profile/edit-profile");
@@ -82,24 +82,24 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            {userProfile.profileImage ? (
+            {profileImage ? (
               <Image
-                source={{ uri: userProfile.profileImage }}
+                source={{ uri: profileImage }}
                 style={styles.avatar}
               />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarText}>
-                  {userProfile.firstName[0]}
-                  {userProfile.lastName[0]}
+                  {firstName[0]}
+                  {lastName[0]}
                 </Text>
               </View>
             )}
           </View>
           <Text style={styles.userName}>
-            {userProfile.firstName} {userProfile.lastName}
+            {firstName} {lastName}
           </Text>
-          <Text style={styles.userEmail}>{userProfile.email}</Text>
+          <Text style={styles.userEmail}>{email}</Text>
         </View>
 
         {/* Personal Information */}
@@ -108,22 +108,22 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <ProfileItem
               label="First Name"
-              value={userProfile.firstName}
+              value={firstName}
               onPress={handleEditProfile}
             />
             <ProfileItem
               label="Last Name"
-              value={userProfile.lastName}
+              value={lastName}
               onPress={handleEditProfile}
             />
             <ProfileItem
               label="Email Address"
-              value={userProfile.email}
+              value={email}
               onPress={handleEditProfile}
             />
             <ProfileItem
               label="Phone Number"
-              value={userProfile.phoneNumber}
+              value={phoneNumber}
               onPress={handleEditProfile}
             />
           </View>
@@ -147,10 +147,6 @@ export default function ProfileScreen() {
           <View style={styles.card}>
             <TouchableOpacity style={styles.profileItem}>
               <Text style={styles.accountActionText}>Privacy Policy</Text>
-              <Text style={styles.arrow}>→</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.profileItem}>
-              <Text style={styles.accountActionText}>Terms of Service</Text>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.profileItem}>

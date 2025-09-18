@@ -1,7 +1,9 @@
+import { walletService } from "@/lib/api";
 import { rs } from "@/lib/functions";
-import { useUser } from "@/redux/hooks/hooks";
+import { useUser, useWallet } from "@/redux/hooks/hooks";
 import { poppinsFonts } from "@/theme/fonts";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Alert,
@@ -21,7 +23,7 @@ export const PaystackButton = () => {
   const [submitting, setSubmitting] = useState(false);
   const { popup } = usePaystack();
   const { user } = useUser();
-
+	const {wallet} =useWallet();
   const parsedAmount = useMemo(() => {
     const n = Number(input.replace(/[^0-9.]/g, ""));
     return isNaN(n) ? 0 : Math.floor(n);
@@ -43,8 +45,14 @@ export const PaystackButton = () => {
       reference: `TZTX-${Date.now()}`,
       amount: parsedAmount,
       onSuccess: (response) => {
-        console.log("payment-response: ", response);
+        console.log("payment-response: ", JSON.stringify(response));
+
+				walletService.fund({ customerCode: wallet?.customerCode!, transactionReference: response.reference})
         handleClose();
+				Alert.alert("Payment successful", "Your transaction was successful.", [
+				 { text: "OK", onPress: () => router.replace('/(tabs)') },
+				]);
+
       },
       onCancel: () => {
         console.log("payment-cancelled");

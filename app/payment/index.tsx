@@ -1,9 +1,12 @@
 // FundAccountScreen.tsx
 import { PaystackButton } from "@/components/fund_account/paystack-button";
 import { CustomPaystackProvider } from "@/components/fund_account/paystack-provider";
+import { walletService, IVirtualAccount } from "@/lib/api";
+import { useVirtualAccount } from "@/redux/hooks/hooks";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Clipboard,
   SafeAreaView,
@@ -19,12 +22,34 @@ const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
 export default function FundAccountScreen() {
-  const [selectedMethod, setSelectedMethod] = useState(null);
-  const userAccountNumber = "1234567890";
-  const bankName = "Tanza Bank";
-  const accountName = "John Doe";
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const { virtualAccount, saveVirtualAccount } = useVirtualAccount();
+  const [loading, setLoading] = useState(true);
+
+  const accountNumber = virtualAccount?.accountNumber || "••••••••••";
+  const bankName = virtualAccount?.bankName || "Loading bank...";
+  const accountName = virtualAccount?.accountName || "Loading name...";
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const resp = await walletService.getVirtualAccount();
+        if (resp?.success) {
+          saveVirtualAccount(resp.data as IVirtualAccount);
+        }
+      } catch (e: any) {
+        const msg = e?.response?.data?.message || e?.message || "Failed to load virtual account";
+        Alert.alert("Error", msg);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const copyToClipboard = (text: string, label: string) => {
+    if (!text) return;
     Clipboard.setString(text);
     Alert.alert("Copied", `${label} copied to clipboard`);
   };
@@ -34,7 +59,7 @@ export default function FundAccountScreen() {
 
     switch (method) {
       case "bank":
-        // Bank transfer is already shown, no additional action needed
+        // Bank transfer is already shown
         break;
       case "card":
         // navigation.navigate('CreditCardPayment');
@@ -91,38 +116,46 @@ export default function FundAccountScreen() {
                 Transfer to this account:
               </Text>
 
-              <View style={styles.accountRow}>
-                <Text style={styles.accountLabel}>Account Number</Text>
-                <View style={styles.accountValueContainer}>
-                  <Text style={styles.accountValue}>{userAccountNumber}</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      copyToClipboard(userAccountNumber, "Account number")
-                    }
-                    style={styles.copyButton}
-                  >
-                    <Text style={styles.copyText}>Copy</Text>
-                  </TouchableOpacity>
+              {loading ? (
+                <View style={{ paddingVertical: rs(12) }}>
+                  <ActivityIndicator />
                 </View>
-              </View>
+              ) : (
+                <>
+                  <View style={styles.accountRow}>
+                    <Text style={styles.accountLabel}>Account Number</Text>
+                    <View style={styles.accountValueContainer}>
+                      <Text style={styles.accountValue}>{accountNumber}</Text>
+                      <TouchableOpacity
+                        onPress={() => copyToClipboard(accountNumber, "Account number")}
+                        style={styles.copyButton}
+                      >
+                        <Text style={styles.copyText}>Copy</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
 
-              <View style={styles.accountRow}>
-                <Text style={styles.accountLabel}>Bank Name</Text>
-                <View style={styles.accountValueContainer}>
-                  <Text style={styles.accountValue}>{bankName}</Text>
-                  <TouchableOpacity
-                    onPress={() => copyToClipboard(bankName, "Bank name")}
-                    style={styles.copyButton}
-                  >
-                    <Text style={styles.copyText}>Copy</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+                  <View style={styles.accountRow}>
+                    <Text style={styles.accountLabel}>Bank Name</Text>
+                    <View style={styles.accountValueContainer}>
+                      <Text style={styles.accountValue}>{bankName}</Text>
+                      <TouchableOpacity
+                        onPress={() => copyToClipboard(bankName, "Bank name")}
+                        style={styles.copyButton}
+                      >
+                        <Text style={styles.copyText}>Copy</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
 
-              <View style={styles.accountRow}>
-                <Text style={styles.accountLabel}>Account Name</Text>
-                <Text style={styles.accountValue}>{accountName}</Text>
-              </View>
+                  <View style={styles.accountRow}>
+                    <Text style={styles.accountLabel}>Account Name</Text>
+                    <Text style={styles.accountValue}>{accountName}</Text>
+                  </View>
+
+
+                </>
+              )}
 
               <View style={styles.noteContainer}>
                 <Text style={styles.noteText}>

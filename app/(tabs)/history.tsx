@@ -1,6 +1,6 @@
 import { tzColors } from "@/theme/color";
 import { router } from "expo-router";
-import { JSX, useCallback, useEffect, useState } from "react";
+import { JSX, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,13 +12,15 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { transactionService } from "@/lib/api";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue(n * UI_SCALE);
+const PAGE_SIZE = 10;
 
 type TransactionType = "send" | "receive" | "fund";
 
-type TransactionStatus = "completed" | "in_transit" | "pending" | "failed";
+type TransactionStatus = "completed" | "failed" | "refunded" | "in_transit" | "pending";
 
 type Transaction = {
   id: string;
@@ -37,189 +39,76 @@ type Transaction = {
   reference?: string;
 };
 
-// Extended demo data with more transaction types
-const generateTransactions = (page = 0, limit = 20): Transaction[] => {
-  const baseTransactions: Transaction[] = [
-    {
-      id: "txn_001",
-      type: "send",
-      title: "Package to Lagos",
-      subtitle: "Delivered to John Smith • 2.5kg",
-      amount: -1500,
-      date: "2024-01-15T10:30:00Z",
-      status: "completed",
-      recipient: "John Smith",
-      trackingId: "TZ001234567",
-      location: "Lagos, Nigeria",
-    },
-    {
-      id: "txn_002",
-      type: "receive",
-      title: "Package from Abuja",
-      subtitle: "From Sarah Johnson • 1.2kg",
-      amount: 2000,
-      date: "2024-01-14T14:20:00Z",
-      status: "completed",
-      sender: "Sarah Johnson",
-      trackingId: "TZ001234568",
-      location: "Abuja, Nigeria",
-    },
-    {
-      id: "txn_003",
-      type: "fund",
-      title: "Wallet Top-up",
-      subtitle: "Bank Transfer • GTBank",
-      amount: 5000,
-      date: "2024-01-13T09:15:00Z",
-      status: "completed",
-      paymentMethod: "Bank Transfer",
-      reference: "REF123456789",
-    },
-    {
-      id: "txn_004",
-      type: "send",
-      title: "Package to Port Harcourt",
-      subtitle: "Delivered to Mike Brown • 0.8kg",
-      amount: -800,
-      date: "2024-01-12T16:45:00Z",
-      status: "completed",
-      recipient: "Mike Brown",
-      trackingId: "TZ001234569",
-      location: "Port Harcourt, Nigeria",
-    },
-    {
-      id: "txn_005",
-      type: "fund",
-      title: "Card Payment",
-      subtitle: "Visa ending in 4532",
-      amount: 3000,
-      date: "2024-01-11T11:30:00Z",
-      status: "completed",
-      paymentMethod: "Credit Card",
-      reference: "CC987654321",
-    },
-    {
-      id: "txn_006",
-      type: "send",
-      title: "Package to Kano",
-      subtitle: "In Transit to Alice Cooper • 3.1kg",
-      amount: -2200,
-      date: "2024-01-10T08:20:00Z",
-      status: "in_transit",
-      recipient: "Alice Cooper",
-      trackingId: "TZ001234570",
-      location: "Kano, Nigeria",
-    },
-    {
-      id: "txn_007",
-      type: "receive",
-      title: "Package from Ibadan",
-      subtitle: "From David Wilson • 0.5kg",
-      amount: 1200,
-      date: "2024-01-09T13:10:00Z",
-      status: "completed",
-      sender: "David Wilson",
-      trackingId: "TZ001234571",
-      location: "Ibadan, Nigeria",
-    },
-    {
-      id: "txn_008",
-      type: "fund",
-      title: "Google Pay",
-      subtitle: "Google Pay Transfer",
-      amount: 4500,
-      date: "2024-01-08T15:25:00Z",
-      status: "completed",
-      paymentMethod: "Google Pay",
-      reference: "GP456789123",
-    },
-  ];
-
-  // Generate more transactions for pagination
-  const transactions: Transaction[] = [];
-  for (let i = 0; i < limit; i++) {
-    const baseIndex = i % baseTransactions.length;
-    const transaction: Transaction = {
-      ...baseTransactions[baseIndex],
-      id: `txn_${page}_${i}`,
-      date: new Date(
-        Date.now() - (page * limit + i) * 24 * 60 * 60 * 1000
-      ).toISOString(),
-    };
-    transactions.push(transaction);
-  }
-
-  return transactions;
-};
-
 export default function TransactionHistoryScreen(): JSX.Element {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(0);
+  const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
-  const [filter, setFilter] = useState<"all" | TransactionType>("all"); // all, send, receive, fund
+  const [filter, setFilter] = useState<"all" | "ORDER" | "DEPOSIT">("all");
+
+  const mapApiToUI = useCallback((items: any[]): Transaction[] => {
+    return (items || []).map((t: any) => {
+      const iconType: TransactionType = t.type === "DEPOSIT" ? "fund" : "send"; // ORDER→send (outgoing), DEPOSIT→fund
+      const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Order";
+      const created = new Date(t.createdAt);
+      const dateStr = !isNaN(created.getTime()) ? created.toISOString() : t.createdAt;
+      // Map status: API: complete, failed, refunded → UI: completed, failed, refunded
+      const statusMap: Record<string, TransactionStatus> = {
+        complete: "completed",
+        failed: "failed",
+        refunded: "refunded",
+      } as const;
+      const status = (statusMap[(t.status || "").toLowerCase()] || "completed") as TransactionStatus;
+      return {
+        id: t.id,
+        type: iconType,
+        title,
+        subtitle: (t.description || "").toString(),
+        amount: Number(t.amount) || 0,
+        date: dateStr,
+        status,
+      } as Transaction;
+    });
+  }, []);
+
+  const fetchPage = useCallback(async (pageToLoad: number, append: boolean) => {
+    try {
+      const params: any = { limit: PAGE_SIZE, page: pageToLoad };
+      if (filter !== "all") params.transactionType = filter;
+      const resp = await transactionService.getRecent(params);
+      const apiItems = (resp as any)?.data || [];
+      const mapped = mapApiToUI(apiItems);
+      setHasMore(((resp as any)?.pagination?.page || pageToLoad) < ((resp as any)?.pagination?.totalPages || 0));
+      setPage(pageToLoad);
+      setTransactions((prev) => (append ? [...prev, ...mapped] : mapped));
+    } catch (e) {
+      console.warn("Failed to load transactions", e);
+    }
+  }, [filter, mapApiToUI]);
 
   useEffect(() => {
-    loadInitialTransactions();
-  }, [filter]);
-
-  const loadInitialTransactions = async (): Promise<void> => {
     setLoading(true);
-    setPage(0);
-
-    // Simulate API call
-    setTimeout(() => {
-      const newTransactions = generateTransactions(0, 20);
-      const filteredTransactions = filterTransactions(newTransactions);
-      setTransactions(filteredTransactions);
-      setLoading(false);
-      setHasMore(filteredTransactions.length === 20);
-    }, 1000);
-  };
+    fetchPage(1, false).finally(() => setLoading(false));
+  }, [filter, fetchPage]);
 
   const loadMoreTransactions = async (): Promise<void> => {
     if (loadingMore || !hasMore) return;
-
     setLoadingMore(true);
     const nextPage = page + 1;
-
-    // Simulate API call
-    setTimeout(() => {
-      const newTransactions = generateTransactions(nextPage, 20);
-      const filteredTransactions = filterTransactions(newTransactions);
-
-      if (filteredTransactions.length > 0) {
-        setTransactions((prev) => [...prev, ...filteredTransactions]);
-        setPage(nextPage);
-        setHasMore(filteredTransactions.length === 20);
-      } else {
-        setHasMore(false);
-      }
-
-      setLoadingMore(false);
-    }, 1500);
+    fetchPage(nextPage, true).finally(() => setLoadingMore(false));
   };
 
   const onRefresh = useCallback(async (): Promise<void> => {
     setRefreshing(true);
-    setPage(0);
-
-    setTimeout(() => {
-      const newTransactions = generateTransactions(0, 20);
-      const filteredTransactions = filterTransactions(newTransactions);
-      setTransactions(filteredTransactions);
-      setRefreshing(false);
-      setHasMore(true);
-    }, 1000);
-  }, [filter]);
+    fetchPage(1, false).finally(() => setRefreshing(false));
+  }, [fetchPage]);
 
   const filterTransactions = (
     transactionList: Transaction[]
   ): Transaction[] => {
-    if (filter === "all") return transactionList;
-    return transactionList.filter((transaction) => transaction.type === filter);
+    return transactionList; // server-side filtered
   };
 
   const getTransactionIcon = (type: TransactionType): string => {
@@ -239,6 +128,8 @@ export default function TransactionHistoryScreen(): JSX.Element {
     switch (status) {
       case "completed":
         return "#22c55e";
+      case "refunded":
+        return "#06b6d4";
       case "in_transit":
         return "#f59e0b";
       case "pending":
@@ -321,7 +212,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
     type,
     label,
   }: {
-    type: "all" | TransactionType;
+    type: "all" | "ORDER" | "DEPOSIT";
     label: string;
   }): JSX.Element => (
     <TouchableOpacity
@@ -366,9 +257,8 @@ export default function TransactionHistoryScreen(): JSX.Element {
       {/* Filter Buttons */}
       <View style={styles.filterContainer}>
         <FilterButton type="all" label="All" />
-        <FilterButton type="send" label="Sent" />
-        <FilterButton type="receive" label="Received" />
-        <FilterButton type="fund" label="Funded" />
+        <FilterButton type="DEPOSIT" label="Deposits" />
+        <FilterButton type="ORDER" label="Orders" />
       </View>
 
       {loading ? (

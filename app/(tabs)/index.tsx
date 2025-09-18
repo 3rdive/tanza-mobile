@@ -1,9 +1,12 @@
 // HomeScreen.ts
+import { transactionService, userService, walletService } from "@/lib/api";
 import { StorageKeys, StorageMechanics } from "@/lib/storage-mechanics";
+import { useUser, useWallet } from "@/redux/hooks/hooks";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -15,51 +18,89 @@ import { RFValue } from "react-native-responsive-fontsize";
 const UI_SCALE = 0.82; // globally downscale sizes ~18%
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
-const demoTransactions = [
-  {
-    id: "1",
-    type: "send",
-    title: "Package to Lagos",
-    subtitle: "Delivered to John Smith",
-    amount: -1500,
-    date: "2024-01-15",
-    status: "completed",
-  },
-  {
-    id: "2",
-    type: "receive",
-    title: "Package from Abuja",
-    subtitle: "From Sarah Johnson",
-    amount: 2000,
-    date: "2024-01-14",
-    status: "completed",
-  },
-  {
-    id: "3",
-    type: "fund",
-    title: "Wallet Top-up",
-    subtitle: "Bank Transfer",
-    amount: 5000,
-    date: "2024-01-13",
-    status: "completed",
-  },
-  {
-    id: "4",
-    type: "send",
-    title: "Package to Port Harcourt",
-    subtitle: "Delivered to Mike Brown",
-    amount: -800,
-    date: "2024-01-12",
-    status: "completed",
-  },
-];
-
 export default function HomeScreen() {
-  const walletBalance = 2000;
-  const userName = "John Doe";
+  const { user, access_token, setUser } = useUser();
+  const userName = useMemo(() => {
+    if (!user) return "";
+    const first = (user as any).firstName || "";
+    const last = (user as any).lastName || "";
+    return `${first} ${last}`.trim();
+  }, [user]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const { balance, setWallet } = useWallet();
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async (isInitial: boolean = false) => {
+    if (isInitial) {
+      setIsLoading(true);
+      setTransactionsLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+    try {
+      // Fetch wallet and recent transactions concurrently
+      const [walletResp, txResp] = await Promise.all([
+        walletService.getWallet(),
+        transactionService.getRecent({ limit: 4, page: 1 }),
+      ]);
+
+      if (walletResp?.success) {
+        setWallet(walletResp.data);
+      }
+      if (txResp?.success) {
+        const apiTx = (txResp as any).data || [];
+        const mapped = apiTx.map((t: any) => {
+          // Map API type to local icon type and amount sign stays as-is for now
+          const iconType =
+            t.type === "DEPOSIT"
+              ? "fund"
+              : t.type === "WITHDRAWAL"
+              ? "send"
+              : "receive";
+          const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Package Sent";
+          const created = new Date(t.createdAt);
+          const dateStr = !isNaN(created.getTime())
+            ? created.toLocaleDateString()
+            : t.createdAt;
+          return {
+            id: t.id,
+            type: iconType,
+            title,
+            subtitle: (t.description || "").toString(),
+            amount: Number(t.amount) || 0,
+            date: dateStr,
+            status: t.status,
+          };
+        });
+        setTransactions(mapped);
+      }
+    } catch (e) {
+      // Optionally: show a toast/log
+      console.warn("Failed to load dashboard data", e);
+    } finally {
+      if (isInitial) {
+        setIsLoading(false);
+        setTransactionsLoading(false);
+      } else {
+        setRefreshing(false);
+        setTransactionsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    userService
+      .getProfile()
+      .then((response) => {
+        setUser({ access_token: access_token || null, user: response.data });
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, []);
 
   useEffect(() => {
     StorageMechanics.set(
@@ -67,15 +108,8 @@ export default function HomeScreen() {
       StorageKeys.HAS_ONBOARDING_COMPLETED
     );
 
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-
-    setTimeout(() => {
-      setTransactions(demoTransactions);
-      setTransactionsLoading(false);
-    }, 2000);
-  }, []);
+    load(true);
+  }, [load]);
 
   const getTransactionIcon = (type: any) => {
     switch (type) {
@@ -140,9 +174,20 @@ export default function HomeScreen() {
     );
   }
 
-  return (
+ const formattedBalance = new Intl.NumberFormat('en-US').format(balance ?? 0);
+
+ return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(false)}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.userInfo}>
@@ -176,7 +221,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.balanceAmount} allowFontScaling={false}>
-            ₦{walletBalance.toLocaleString()}
+            ₦{formattedBalance}
           </Text>
           <Text style={styles.balanceSubtext} allowFontScaling={false}>
             Available for transactions
@@ -187,7 +232,12 @@ export default function HomeScreen() {
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push("/book-order")}
+            onPress={() =>
+              router.push({
+                pathname: "/book-order",
+                params: { send_type: "sender" },
+              })
+            }
           >
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon} allowFontScaling={false}>
@@ -201,7 +251,12 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push("/book-order")}
+            onPress={() =>
+              router.push({
+                pathname: "/book-order",
+                params: { send_type: "recipient" },
+              })
+            }
           >
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon} allowFontScaling={false}>
@@ -367,7 +422,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   balanceAmount: {
-    fontSize: rs(36),
+    fontSize: rs(33),
     fontWeight: "bold",
     color: "#fff",
     marginBottom: rs(4),

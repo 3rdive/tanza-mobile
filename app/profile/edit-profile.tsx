@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import type React from "react";
 import type { JSX } from "react"; // Declare JSX variable
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Alert,
   SafeAreaView,
@@ -13,6 +13,8 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { userService } from "@/lib/api";
+import { useUser } from "@/redux/hooks/hooks";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -39,13 +41,30 @@ interface FormErrors {
   phoneNumber?: string;
 }
 
-export default function EditProfileScreen(): JSX.Element {
+export default function EditProfileScreen(): JSX.Element { 
+  const { user, access_token, setUser } = useUser();
+  const initialFirst = (user as any)?.firstName || "";
+  const initialLast = (user as any)?.lastName || "";
+  const initialEmail = (user as any)?.email || "";
+  const initialMobile = (user as any)?.mobile || "";
+  const initialCode = (user as any)?.countryCode || "+234";
+  const initialPhoneDisplay = initialMobile ? `${initialCode}${initialMobile}` : "";
   const [formData, setFormData] = useState<EditProfileFormData>({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phoneNumber: "+234 801 234 5678",
+    firstName: initialFirst,
+    lastName: initialLast,
+    email: initialEmail,
+    phoneNumber: initialPhoneDisplay,
   });
+
+  useEffect(() => {
+    setFormData({
+      firstName: initialFirst,
+      lastName: initialLast,
+      email: initialEmail,
+      phoneNumber: initialPhoneDisplay,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFirst, initialLast, initialEmail, initialPhoneDisplay]);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -95,22 +114,58 @@ export default function EditProfileScreen(): JSX.Element {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Parse phone into countryCode and mobile (API expects both)
+      const raw = (formData.phoneNumber || "").replace(/\s|\-/g, "");
+      let countryCode = initialCode;
+      let mobile = raw;
+      if (raw.startsWith("+234")) {
+        countryCode = "+234";
+        mobile = raw.replace("+234", "");
+      } else if (raw.startsWith("+")) {
+        // Fallback: split at first 4 chars as code, rest as number
+        countryCode = raw.slice(0, 4);
+        mobile = raw.slice(4);
+      } else if (raw.startsWith("0")) {
+        // If local 0xxxxxxxxxx, strip leading 0 and use default +234
+        countryCode = initialCode || "+234";
+        mobile = raw.replace(/^0/, "");
+      } else {
+        countryCode = initialCode || "+234";
+        mobile = raw;
+      }
+      mobile = mobile.replace(/\D/g, "");
 
-      // Save to storage
-      const updatedProfile: UserProfile = {
-        ...formData,
-        profileImage: null,
-      };
+      const payload = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        profilePic: (user as any)?.profilePic || null,
+        countryCode,
+        email: formData.email.trim(),
+        mobile,
+      } as const;
 
-      // StorageMechanics.set(StorageKeys.USER_DATA, JSON.stringify(updatedProfile))
-
-      Alert.alert("Success", "Your profile has been updated successfully.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (error) {
-      Alert.alert("Error", "Failed to update profile. Please try again.");
+      const resp = await userService.updateProfile(payload);
+      if (resp?.success && resp.data) {
+        // Update redux user while preserving token
+        const updatedUser = resp.data as any;
+        await setUser({ access_token: access_token || null, user: updatedUser });
+        Alert.alert("Success", "Your profile has been updated successfully.", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+      } else {
+        Alert.alert("Update failed", resp?.message || "Please try again");
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to update profile. Please try again.";
+      // Optionally mark field-specific errors based on backend message
+      if (typeof msg === "string") {
+        if (msg.toLowerCase().includes("email")) {
+          setErrors((prev) => ({ ...prev, email: msg }));
+        } else if (msg.toLowerCase().includes("mobile")) {
+          setErrors((prev) => ({ ...prev, phoneNumber: msg }));
+        }
+      }
+      Alert.alert("Error", msg);
     } finally {
       setIsLoading(false);
     }

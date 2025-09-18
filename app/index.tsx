@@ -84,15 +84,17 @@ export default function AnimatedSplashScreen() {
       StorageKeys.HAS_ONBOARDING_COMPLETED
     );
     if (!fontsLoaded) return;
+	 StatusBar.setHidden(false, "fade");
 
-    router.replace("/(tabs)");
+
+	 // router.replace("/(tabs)");
     if (isAuthenticated) {
       router.replace("/(tabs)");
     } else {
       if (hasOnboarded) {
-        router.replace("/(auth)");
-      } else {
         router.replace("/(auth)/sign-in");
+      } else {
+        router.replace("/(auth)");
       }
     }
   };

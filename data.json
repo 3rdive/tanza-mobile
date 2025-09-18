@@ -1,9 +1,27 @@
 {
-  "message": "Approved",
-  "redirecturl": "?trxref=TZTX-1757177476607&reference=TZTX-1757177476607",
-  "reference": "TZTX-1757177476607",
-  "status": "success",
-  "trans": "5312602393",
-  "transaction": "5312602393",
-  "trxref": "TZTX-1757177476607"
+  "data": {
+    "data": {
+      "createdAt": "2025-09-16T15:15:26.636Z",
+      "customerCode": "CUS_fwcsn41yjc1mqxf",
+      "id": "56bd48eb-1568-4e7b-8b31-83f59c91fea2",
+      "isFrozen": false,
+      "walletBalance": "0.00"
+    },
+    "message": "Request successful",
+    "success": true
+  },
+  "headers": {
+    "access-control-allow-origin": "*",
+    "connection": "keep-alive",
+    "content-length": "216",
+    "content-type": "application/json; charset=utf-8",
+    "date": "Tue, 16 Sep 2025 15:31:44 GMT",
+    "etag": "W/\"d8-ATFLLQjlF/2LDvw0atNZgQJav3I\"",
+    "keep-alive": "timeout=5",
+    "x-powered-by": "Express"
+  },
+  "method": "get",
+  "status": 200,
+  "statusText": undefined,
+  "url": "/api/v1/wallet"
 }

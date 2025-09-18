@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -10,17 +10,20 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { poppinsFonts } from "../../theme/fonts";
+import { poppinsFonts } from "@/theme/fonts";
+import { locationService, ILocationFeature, orderService } from "@/lib/api";
 
 const UI_SCALE = 0.82; // globally downscale sizes
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 interface LocationSuggestion {
   id: string;
-  name: string;
-  address: string;
-  city: string;
+  title: string; // e.g., name or prominent label
+  subtitle: string; // e.g., full address line
+  lat?: number;
+  lon?: number;
 }
 
 interface BookingFormData {
@@ -32,42 +35,25 @@ interface BookingFormData {
 }
 
 const mockLocations: LocationSuggestion[] = [
-  {
-    id: "1",
-    name: "Victoria Island",
-    address: "Victoria Island, Lagos",
-    city: "Lagos",
-  },
-  { id: "2", name: "Ikeja GRA", address: "Ikeja GRA, Lagos", city: "Lagos" },
-  {
-    id: "3",
-    name: "Lekki Phase 1",
-    address: "Lekki Phase 1, Lagos",
-    city: "Lagos",
-  },
-  { id: "4", name: "Wuse 2", address: "Wuse 2, Abuja", city: "Abuja" },
-  {
-    id: "5",
-    name: "Garki Area 11",
-    address: "Garki Area 11, Abuja",
-    city: "Abuja",
-  },
-  {
-    id: "6",
-    name: "Port Harcourt GRA",
-    address: "GRA Phase 2, Port Harcourt",
-    city: "Port Harcourt",
-  },
+  { id: "1", title: "Victoria Island", subtitle: "Victoria Island, Lagos" },
+  { id: "2", title: "Ikeja GRA", subtitle: "Ikeja GRA, Lagos" },
+  { id: "3", title: "Lekki Phase 1", subtitle: "Lekki Phase 1, Lagos" },
+  { id: "4", title: "Wuse 2", subtitle: "Wuse 2, Abuja" },
+  { id: "5", title: "Garki Area 11", subtitle: "Garki Area 11, Abuja" },
+  { id: "6", title: "Port Harcourt GRA", subtitle: "GRA Phase 2, Port Harcourt" },
 ];
 
+
+const defaultFormData: BookingFormData = {
+ pickupLocation: "",
+ dropoffLocation: "",
+ noteForRider: "",
+ vehicleType: "rider",
+ numberOfItems: 1,
+}
 export default function BookLogisticsScreen() {
-  const [formData, setFormData] = useState<BookingFormData>({
-    pickupLocation: "",
-    dropoffLocation: "",
-    noteForRider: "",
-    vehicleType: "rider",
-    numberOfItems: 1,
-  });
+  const [formData, setFormData] = useState<BookingFormData>({ ...defaultFormData });
+  const [isBooking, setIsBooking] = useState(false);
 
   const [pickupSuggestions, setPickupSuggestions] = useState<
     LocationSuggestion[]
@@ -78,15 +64,22 @@ export default function BookLogisticsScreen() {
   const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
   const [showDropoffSuggestions, setShowDropoffSuggestions] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [serviceCharge, setServiceCharge] = useState<number | null>(null);
+  const [eta, setEta] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   // Animation values
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const priceAnim = useRef(new Animated.Value(0)).current;
   const vehicleSelectAnim = useRef(new Animated.Value(0)).current;
+ const { send_type } = useLocalSearchParams();
 
-  useEffect(() => {
+
+ useEffect(() => {
     // Initial entrance animation
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -103,37 +96,56 @@ export default function BookLogisticsScreen() {
   }, []);
 
   useEffect(() => {
-    // Calculate price when both locations are selected
-    if (formData.pickupLocation && formData.dropoffLocation) {
+    // Calculate price when both coordinates are selected
+    if (pickupCoords && dropoffCoords) {
       calculatePrice();
     } else {
       setCalculatedPrice(null);
+      setDeliveryFee(null);
+      setServiceCharge(null);
+      setEta(null);
     }
-  }, [formData.pickupLocation, formData.dropoffLocation, formData.vehicleType]);
+  }, [pickupCoords, dropoffCoords, formData.vehicleType]);
 
-  const calculatePrice = () => {
-    setIsCalculating(true);
-
-    // Simulate price calculation
-    setTimeout(() => {
-      const basePrice = formData.vehicleType === "rider" ? 800 : 1500;
-      const distance = Math.random() * 20 + 5; // Random distance 5-25km
-      const price = Math.round(basePrice + distance * 50);
-
-      setCalculatedPrice(price);
+  const calculatePrice = async () => {
+    if (!pickupCoords || !dropoffCoords) return;
+    try {
+      setIsCalculating(true);
+      const vehicle = formData.vehicleType === "rider" ? "bike" : "van";
+      const res = await orderService.calculateCharge({
+        startLat: pickupCoords.lat,
+        startLon: pickupCoords.lon,
+        endLat: dropoffCoords.lat,
+        endLon: dropoffCoords.lon,
+        vehicleType: vehicle,
+      });
+      if (res?.success) {
+        const d = res.data as any;
+        setCalculatedPrice(d.totalAmount ?? null);
+        setDeliveryFee(d.deliveryFee ?? null);
+        setServiceCharge(d.serviceCharge ?? null);
+        setEta(d.duration ?? null);
+        // Animate price appearance
+        Animated.spring(priceAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        setCalculatedPrice(null);
+        Alert.alert("Pricing Error", res?.message || "Unable to calculate price");
+      }
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Pricing Error", e?.response?.data?.message || e?.message || "Unable to calculate price");
+      setCalculatedPrice(null);
+    } finally {
       setIsCalculating(false);
-
-      // Animate price appearance
-      Animated.spring(priceAnim, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-    }, 1500);
+    }
   };
 
-  const searchLocations = (query: string, type: "pickup" | "dropoff") => {
+  const searchLocations = async (query: string, type: "pickup" | "dropoff") => {
     if (query.length < 2) {
       if (type === "pickup") {
         setPickupSuggestions([]);
@@ -145,18 +157,57 @@ export default function BookLogisticsScreen() {
       return;
     }
 
-    const filtered = mockLocations.filter(
-      (location) =>
-        location.name.toLowerCase().includes(query.toLowerCase()) ||
-        location.address.toLowerCase().includes(query.toLowerCase())
-    );
+    try {
+      const res = await locationService.search(query);
+      const features = (res?.data || []) as ILocationFeature[];
 
-    if (type === "pickup") {
-      setPickupSuggestions(filtered);
-      setShowPickupSuggestions(true);
-    } else {
-      setDropoffSuggestions(filtered);
-      setShowDropoffSuggestions(true);
+      const mapped: LocationSuggestion[] = features.map((f) => {
+        const p = f.properties || ({} as any);
+        const g = f.geometry || ({} as any);
+        const parts: string[] = [];
+        if (p.street) parts.push(p.street);
+        if (p.city) parts.push(p.city);
+        if (p.state) parts.push(p.state);
+        if (p.country) parts.push(p.country);
+        if (p.postcode) parts.push(p.postcode);
+        const subtitle = parts.filter(Boolean).join(", ");
+        const title = p.name || subtitle || `${p.type || "Location"}`;
+        return {
+          id: `${p.osm_type || ""}_${p.osm_id || Math.random().toString(36).slice(2)}`,
+          title,
+          subtitle,
+          lon: g?.coordinates?.[0],
+          lat: g?.coordinates?.[1],
+        };
+      });
+
+      const results = mapped.length > 0 ? mapped : mockLocations.filter((m) =>
+        m.title.toLowerCase().includes(query.toLowerCase()) ||
+        m.subtitle.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (type === "pickup") {
+        setPickupSuggestions(results);
+        setShowPickupSuggestions(true);
+      } else {
+        setDropoffSuggestions(results);
+        setShowDropoffSuggestions(true);
+      }
+    } catch (e) {
+      // Fallback to simple mock filtering on error
+      const filtered = mockLocations.filter(
+        (location) =>
+          location.title.toLowerCase().includes(query.toLowerCase()) ||
+          location.subtitle.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (type === "pickup") {
+        setPickupSuggestions(filtered);
+        setShowPickupSuggestions(true);
+      } else {
+        setDropoffSuggestions(filtered);
+        setShowDropoffSuggestions(true);
+      }
     }
   };
 
@@ -164,11 +215,14 @@ export default function BookLogisticsScreen() {
     location: LocationSuggestion,
     type: "pickup" | "dropoff"
   ) => {
+    const text =  location.title || location.subtitle || "";
     if (type === "pickup") {
-      setFormData((prev) => ({ ...prev, pickupLocation: location.address }));
+      setFormData((prev) => ({ ...prev, pickupLocation: text }));
+      setPickupCoords(location.lat && location.lon ? { lat: location.lat, lon: location.lon } : null);
       setShowPickupSuggestions(false);
     } else {
-      setFormData((prev) => ({ ...prev, dropoffLocation: location.address }));
+      setFormData((prev) => ({ ...prev, dropoffLocation: text }));
+      setDropoffCoords(location.lat && location.lon ? { lat: location.lat, lon: location.lon } : null);
       setShowDropoffSuggestions(false);
     }
   };
@@ -192,10 +246,10 @@ export default function BookLogisticsScreen() {
   };
 
   const handleBooking = () => {
-    if (!formData.pickupLocation || !formData.dropoffLocation) {
+    if (!formData.pickupLocation || !formData.dropoffLocation || !pickupCoords || !dropoffCoords) {
       Alert.alert(
         "Missing Information",
-        "Please select both pickup and dropoff locations"
+        "Please select both pickup and dropoff locations from the suggestions"
       );
       return;
     }
@@ -208,17 +262,73 @@ export default function BookLogisticsScreen() {
       return;
     }
 
+    const vehicle = formData.vehicleType === "rider" ? "bike" : "van";
+
     Alert.alert(
       "Confirm Booking",
-      `Book ${formData.vehicleType} for ₦${calculatedPrice.toLocaleString()}?`,
+      `Book ${vehicle} for ₦${calculatedPrice.toLocaleString()}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Book Now",
-          onPress: () => {
-            Alert.alert("Success", "Your booking has been confirmed!", [
-              { text: "OK", onPress: () => router.back() },
-            ]);
+          onPress: async () => {
+            setIsBooking(true);
+            try {
+              const res = await orderService.create(
+                {
+                  startLat: pickupCoords.lat,
+                  startLon: pickupCoords.lon,
+                  endLat: dropoffCoords.lat,
+                  endLon: dropoffCoords.lon,
+                  vehicleType: vehicle,
+                },
+                {
+                  dropOffLocation: formData.dropoffLocation,
+                  pickUpLocation: formData.pickupLocation,
+                  userOrderRole: (send_type ?? "sender") as string,
+                  vehicleType: vehicle,
+                  noteForRider: formData.noteForRider || null,
+                }
+              );
+
+              if (res?.success) {
+                Alert.alert("Success", "Order created successfully", [
+                  { text: "OK", onPress: () => {
+									 setFormData(defaultFormData)
+									 router.push('/(tabs)/history') }},
+                ]);
+              } else {
+                const msg = res?.message || "Unable to create order";
+                if (/insufficient balance/i.test(msg)) {
+                  Alert.alert(
+                    "Insufficient Balance",
+                    "Your wallet balance is insufficient. Would you like to fund your wallet now?",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "Fund Wallet", onPress: () => router.push("/payment") },
+                    ]
+                  );
+                } else {
+                  Alert.alert("Booking Failed", msg);
+                }
+              }
+            } catch (e: any) {
+              const msg = e?.response?.data?.message || e?.message || "Unable to create order";
+              if (/insufficient balance/i.test(String(msg))) {
+                Alert.alert(
+                  "Insufficient Balance",
+                  "Your wallet balance is insufficient. Would you like to fund your wallet now?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Fund Wallet", onPress: () => router.push("/payment") },
+                  ]
+                );
+              } else {
+                Alert.alert("Booking Failed", String(msg));
+              }
+            } finally {
+              setIsBooking(false);
+            }
           },
         },
       ]
@@ -233,7 +343,7 @@ export default function BookLogisticsScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: rs(140) }}>
         <Animated.View
           style={[
             styles.formContainer,
@@ -251,15 +361,29 @@ export default function BookLogisticsScreen() {
           ]}
         >
           {/* Location Inputs */}
-          <View style={styles.locationSection}>
+          <View
+            style={[
+              styles.locationSection,
+              (showPickupSuggestions && pickupSuggestions.length > 0) ||
+              (showDropoffSuggestions && dropoffSuggestions.length > 0)
+                ? styles.locationSectionElevated
+                : null,
+            ]}
+          >
             {/* Pickup Location Input */}
-            <View style={styles.locationInputContainer}>
+            <View
+              style={[
+                styles.locationInputContainer,
+                (showPickupSuggestions && pickupSuggestions.length > 0) && styles.raised,
+              ]}
+            >
               <Text style={styles.inputLabel}>📍 Pickup Location</Text>
               <TextInput
                 style={styles.locationInput}
                 value={formData.pickupLocation}
                 onChangeText={(text) => {
                   setFormData((prev) => ({ ...prev, pickupLocation: text }));
+                  setPickupCoords(null);
                   searchLocations(text, "pickup");
                 }}
                 placeholder="Where should we pick up from?"
@@ -275,9 +399,9 @@ export default function BookLogisticsScreen() {
                       style={styles.suggestionItem}
                       onPress={() => selectLocation(location, "pickup")}
                     >
-                      <Text style={styles.suggestionName}>{location.name}</Text>
+                      <Text style={styles.suggestionName}>{location.title}</Text>
                       <Text style={styles.suggestionAddress}>
-                        {location.address}
+                        {location.subtitle}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -291,13 +415,19 @@ export default function BookLogisticsScreen() {
             </View>
 
             {/* Drop-off Location Input */}
-            <View style={styles.locationInputContainer}>
+            <View
+              style={[
+                styles.locationInputContainer,
+                (showDropoffSuggestions && dropoffSuggestions.length > 0) && styles.raised,
+              ]}
+            >
               <Text style={styles.inputLabel}>🎯 Drop-off Location</Text>
               <TextInput
                 style={styles.locationInput}
                 value={formData.dropoffLocation}
                 onChangeText={(text) => {
                   setFormData((prev) => ({ ...prev, dropoffLocation: text }));
+                  setDropoffCoords(null);
                   searchLocations(text, "dropoff");
                 }}
                 placeholder="Where should we deliver to?"
@@ -313,9 +443,9 @@ export default function BookLogisticsScreen() {
                       style={styles.suggestionItem}
                       onPress={() => selectLocation(location, "dropoff")}
                     >
-                      <Text style={styles.suggestionName}>{location.name}</Text>
+                      <Text style={styles.suggestionName}>{location.title}</Text>
                       <Text style={styles.suggestionAddress}>
-                        {location.address}
+                        {location.subtitle}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -373,25 +503,53 @@ export default function BookLogisticsScreen() {
           </View>
         </Animated.View>
 
-        <View style={styles.priceContainer}>
-          <View>
-            <Text style={[styles.price, { color: "black" }]}>
-              ₦{calculatedPrice?.toLocaleString() || 0}
-            </Text>
-            <Text style={styles.amountSubtitle}>TOTAL AMOUNT</Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleBooking}
-            disabled={
-              !formData.pickupLocation ||
-              !formData.dropoffLocation ||
-              !calculatedPrice
-            }
-          >
-            <Text style={[styles.placeOrder]}>Book Now</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
+
+      <View style={styles.priceContainer}>
+        <View>
+          {isCalculating ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#000" />
+              <Text style={{ marginLeft: 8, fontSize: rs(16), color: '#333' }}>Calculating…</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.price, { color: 'black' }]}>₦{calculatedPrice?.toLocaleString() || 0}</Text>
+              <Text style={styles.amountSubtitle}>TOTAL AMOUNT</Text>
+            </>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={handleBooking}
+          disabled={
+            isCalculating ||
+            isBooking ||
+            !formData.pickupLocation ||
+            !formData.dropoffLocation ||
+            !pickupCoords ||
+            !dropoffCoords ||
+            !calculatedPrice
+          }
+        >
+          {isBooking ? (
+            <View style={[styles.placeOrder, { flexDirection: 'row' }]}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={{ color: '#fff', marginLeft: 8, fontSize: rs(18), fontWeight: '600' }}>Booking…</Text>
+            </View>
+          ) : (
+            <Text style={[styles.placeOrder]}>Book Now</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {isBooking && (
+        <View style={styles.bookingOverlay} pointerEvents="auto">
+          <View style={styles.bookingOverlayBox}>
+            <ActivityIndicator size="large" color="#00B624" />
+            <Text style={styles.bookingOverlayText}>Booking your ride…</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -445,11 +603,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
+    overflow: "visible",
+  },
+  locationSectionElevated: {
+    zIndex: 3000,
+    elevation: 600,
+    overflow: "visible",
   },
   locationInputContainer: {
     position: "relative",
-    zIndex: 1,
+    zIndex: 100,
   },
   inputLabel: {
     fontSize: rs(14),
@@ -494,7 +658,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 500,
     zIndex: 1000,
   },
   suggestionItem: {
@@ -696,15 +860,51 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   priceContainer: {
-    justifyContent: "space-between",
-    flexDirection: "row",
-    shadowColor: "#000",
-    borderWidth: 1,
-    borderColor: "#eee",
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: rs(16),
+    paddingVertical: rs(12),
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    justifyContent: 'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  bookingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookingOverlayBox: {
+    backgroundColor: '#fff',
+    paddingVertical: rs(20),
+    paddingHorizontal: rs(24),
+    borderRadius: rs(12),
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    padding: 10,
     shadowOpacity: 0.15,
     shadowRadius: 8,
+    elevation: 8,
+  },
+  bookingOverlayText: {
+    marginTop: rs(10),
+    fontSize: rs(16),
+    fontWeight: '600',
+    color: '#222',
   },
   price: {
     fontSize: rs(32),
@@ -729,5 +929,9 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
     fontSize: rs(13),
     fontWeight: "bold",
+  },
+  raised: {
+    zIndex: 3000,
+    elevation: 600,
   },
 });

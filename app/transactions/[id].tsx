@@ -1,11 +1,19 @@
+import ProgressTracker, {
+  TrackingStatus,
+} from "@/components/transaction/order-tracking";
+import {
+  transactionService,
+  userService,
+  type ITransactionDetail,
+  type IUser,
+} from "@/lib/api";
 import { tzColors } from "@/theme/color";
 import { router, useLocalSearchParams } from "expo-router";
-import type { JSX } from "react";
+import { JSX, useEffect, useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,122 +24,96 @@ import { RFValue } from "react-native-responsive-fontsize";
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
-// Types for transactions and details specific to this screen
-type TransactionType = "send" | "receive" | "fund";
+const baseOrderId = "42097296-527f-4900-b312-3573de899699";
 
-type TransactionStatus = "completed" | "in_transit" | "pending" | "failed";
-
-type BaseTransaction = {
-  id: string;
-  type: TransactionType;
-  title: string;
-  subtitle: string;
-  amount: number;
-  date: string;
-  status: TransactionStatus;
-  // common optional fields
-  trackingId?: string;
-  location?: string;
-  reference?: string;
-};
-
-type SendReceiveDetails = BaseTransaction & {
-  type: "send" | "receive";
-  recipient?: string;
-  recipientPhone?: string;
-  sender?: string;
-  senderPhone?: string;
-  pickupAddress?: string;
-  deliveryAddress?: string;
-  packageDescription?: string;
-  weight?: string;
-  deliveryTime?: string;
-  courierName?: string;
-  courierPhone?: string;
-};
-
-type FundDetails = BaseTransaction & {
-  type: "fund";
-  paymentMethod: string;
-  bankName?: string;
-  accountNumber?: string;
-  sessionId?: string;
-};
-
-type TransactionDetailType = SendReceiveDetails | FundDetails;
-
-// Add this type guard
-const isSendOrReceive = (t: TransactionDetailType): t is SendReceiveDetails =>
-  t.type === "send" || t.type === "receive";
-
-// Mock transaction detail data
-const getTransactionDetail = (id: string): TransactionDetailType | null => {
-  const mockTransactions: Record<string, TransactionDetailType> = {
-    txn_001: {
-      id: "txn_001",
-      type: "send",
-      title: "Package to Lagos",
-      subtitle: "Delivered to John Smith • 2.5kg",
-      amount: -1500,
-      date: "2024-01-15T10:30:00Z",
-      status: "completed",
-      recipient: "John Smith",
-      recipientPhone: "+234 801 234 5678",
-      trackingId: "TZ001234567",
-      location: "Lagos, Nigeria",
-      pickupAddress: "123 Victoria Island, Lagos",
-      deliveryAddress: "456 Ikeja GRA, Lagos",
-      packageDescription: "Electronics - Laptop",
-      weight: "2.5kg",
-      deliveryTime: "2024-01-15T16:45:00Z",
-      courierName: "Ahmed Hassan",
-      courierPhone: "+234 802 345 6789",
-    },
-    txn_002: {
-      id: "txn_002",
-      type: "receive",
-      title: "Package from Abuja",
-      subtitle: "From Sarah Johnson • 1.2kg",
-      amount: 2000,
-      date: "2024-01-14T14:20:00Z",
-      status: "completed",
-      sender: "Sarah Johnson",
-      senderPhone: "+234 803 456 7890",
-      trackingId: "TZ001234568",
-      location: "Abuja, Nigeria",
-      pickupAddress: "789 Wuse 2, Abuja",
-      deliveryAddress: "321 Garki Area 11, Abuja",
-      packageDescription: "Documents - Legal Papers",
-      weight: "1.2kg",
-      deliveryTime: "2024-01-14T18:30:00Z",
-      courierName: "Fatima Abubakar",
-      courierPhone: "+234 804 567 8901",
-    },
-    txn_003: {
-      id: "txn_003",
-      type: "fund",
-      title: "Wallet Top-up",
-      subtitle: "Bank Transfer • GTBank",
-      amount: 5000,
-      date: "2024-01-13T09:15:00Z",
-      status: "completed",
-      paymentMethod: "Bank Transfer",
-      reference: "REF123456789",
-      bankName: "Guaranty Trust Bank",
-      accountNumber: "0123456789",
-      sessionId: "SES789456123",
-    },
-  };
-
-  return mockTransactions[id] || mockTransactions.txn_002;
-};
+const trackingData = [
+  {
+    id: "1",
+    status: TrackingStatus.PENDING,
+    note: "Order created",
+    createdAt: "2025-09-13T21:00:00.000Z",
+    updatedAt: "2025-09-13T21:00:00.000Z",
+    orderId: baseOrderId,
+  },
+  {
+    id: "2",
+    status: TrackingStatus.ACCEPTED,
+    note: "Order accepted by rider",
+    createdAt: "2025-09-13T21:10:00.000Z",
+    updatedAt: "2025-09-13T21:10:00.000Z",
+    orderId: baseOrderId,
+  },
+  {
+    id: "3",
+    status: TrackingStatus.PICKED_UP,
+    note: "Rider picked up the order",
+    createdAt: "2025-09-13T21:33:28.139Z",
+    updatedAt: "2025-09-13T21:33:28.139Z",
+    orderId: baseOrderId,
+  },
+  {
+    id: "4",
+    status: TrackingStatus.TRANSIT,
+    note: "Order is on the way",
+    createdAt: "2025-09-13T21:50:00.000Z",
+    updatedAt: "2025-09-13T21:50:00.000Z",
+    orderId: baseOrderId,
+  },
+  {
+    id: "5",
+    status: TrackingStatus.DELIVERED,
+    note: "Order delivered successfully",
+    createdAt: "2025-09-13T22:10:00.000Z",
+    updatedAt: "2025-09-13T22:10:00.000Z",
+    orderId: baseOrderId,
+  },
+];
 
 export default function TransactionDetail(): JSX.Element {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  console.log("id: ", id);
-  const transaction = id ? getTransactionDetail(id) : null;
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [apiTx, setApiTx] = useState<ITransactionDetail | null>(null);
+  const [profile, setProfile] = useState<IUser | null>(null);
 
-  if (!transaction) {
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        if (!id) {
+          setNotFound(true);
+          return;
+        }
+        const res = await transactionService.getById(String(id));
+        const data = res?.data ?? null;
+        if (!mounted) return;
+        if (!data) {
+          setNotFound(true);
+        } else {
+          setApiTx(data);
+          if (data.order && (!data.order.sender || !data.order.recipient)) {
+            try {
+              const u = await userService.getProfile();
+              if (!mounted) return;
+              if (u?.success && u.data) setProfile(u.data);
+            } catch (_e) {}
+          }
+        }
+      } catch (_e) {
+        if (mounted) setNotFound(true);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  // Fallback mock transaction for legacy UI
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -144,96 +126,58 @@ export default function TransactionDetail(): JSX.Element {
           <Text style={styles.headerTitle}>Transaction Details</Text>
           <View style={styles.placeholder} />
         </View>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Transaction not found</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00B624" />
+          <Text style={styles.loadingText}>Loading transaction…</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const getTransactionIcon = (type: TransactionType): string => {
-    switch (type) {
-      case "send":
-        return "📤";
-      case "receive":
-        return "📥";
-      case "fund":
-        return "💰";
-      default:
-        return "💳";
-    }
-  };
+  if (notFound || !apiTx) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Transaction Details</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.notFoundContainer}>
+          <Text style={styles.notFoundCode}>404</Text>
+          <Text style={styles.notFoundTitle}>Transaction not found</Text>
+          <Text style={styles.notFoundSubtitle}>
+            We could not find this transaction. It may have been moved or
+            deleted.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.notFoundButton}
+          >
+            <Text style={styles.notFoundButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  const getStatusColor = (status: TransactionStatus): string => {
-    switch (status) {
-      case "completed":
-        return "#22c55e";
-      case "in_transit":
-        return "#f59e0b";
-      case "pending":
-        return "#6b7280";
-      case "failed":
-        return "#ef4444";
-      default:
-        return "#6b7280";
-    }
-  };
+  const amountNum =
+    typeof apiTx.amount === "string" ? parseFloat(apiTx.amount) : apiTx.amount;
+  const order = apiTx.order;
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const handleShare = async (): Promise<void> => {
-    try {
-      const shareContent = `Transaction Details\n\nID: ${
-        transaction.id
-      }\nType: ${transaction.title}\nAmount: ₦${Math.abs(
-        transaction.amount
-      ).toLocaleString()}\nDate: ${formatDate(transaction.date)}\nStatus: ${
-        transaction.status
-      }`;
-
-      await Share.share({
-        message: shareContent,
-        title: "Transaction Details",
-      });
-    } catch (error) {
-      Alert.alert("Error", "Failed to share transaction details");
-    }
-  };
-
-  const DetailRow = ({
-    label,
-    value,
-    copyable = false,
-  }: {
-    label: string;
-    value: string;
-    copyable?: boolean;
-  }): JSX.Element => (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <TouchableOpacity
-        style={styles.detailValueContainer}
-        onPress={
-          copyable
-            ? () => Alert.alert("Copied", `${label} copied to clipboard`)
-            : undefined
-        }
-      >
-        <Text style={styles.detailValue}>{value}</Text>
-        {copyable && <Text style={styles.copyIcon}>📋</Text>}
-      </TouchableOpacity>
-    </View>
-  );
+  const safeUserName = profile
+    ? `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim()
+    : "You";
+  const contactSenderName = (order as any)?.sender?.name || safeUserName;
+  const contactSenderPhone =
+    (order as any)?.sender?.phone || profile?.mobile || "";
+  const contactRecipientName = (order as any)?.recipient?.name || safeUserName;
+  const contactRecipientPhone =
+    (order as any)?.recipient?.phone || profile?.mobile || "";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -245,197 +189,137 @@ export default function TransactionDetail(): JSX.Element {
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Transaction Details</Text>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Text style={styles.shareIcon}>↗</Text>
-        </TouchableOpacity>
+        <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Transaction Summary Card */}
+        {/* Summary */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <View style={styles.transactionIconContainer}>
-              <Text style={styles.transactionIcon}>
-                {getTransactionIcon(transaction.type)}
-              </Text>
+              <Text style={styles.transactionIcon}>💳</Text>
             </View>
             <View style={styles.summaryInfo}>
-              <Text style={styles.summaryTitle}>{transaction.title}</Text>
-              <Text style={styles.summarySubtitle}>{transaction.subtitle}</Text>
+              <Text style={styles.summaryTitle}>{apiTx.type}</Text>
+              <Text style={styles.summarySubtitle} numberOfLines={1}>
+                {apiTx.description || ""}
+              </Text>
             </View>
           </View>
-
           <View style={styles.amountContainer}>
             <Text
               style={[
                 styles.amount,
-                transaction.amount > 0
-                  ? styles.positiveAmount
-                  : styles.negativeAmount,
+                amountNum >= 0 ? styles.positiveAmount : styles.negativeAmount,
               ]}
             >
-              {transaction.amount > 0 ? "+" : ""}₦
-              {Math.abs(transaction.amount).toLocaleString()}
+              {amountNum >= 0 ? "+" : ""}₦
+              {Math.abs(amountNum || 0).toLocaleString()}
             </Text>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: getStatusColor(transaction.status) },
-              ]}
-            >
+            <View style={[styles.statusBadge, { backgroundColor: "#00B624" }]}>
               <Text style={styles.statusText}>
-                {transaction.status.replace("_", " ")}
+                {String(`${apiTx.status}d`).replace(/_/g, " ")}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Transaction Details */}
+        {apiTx?.order?.orderTracking && (
+          <ProgressTracker trackingData={apiTx?.order?.orderTracking as any} />
+        )}
+
+        {/* Transaction Info */}
         <View style={styles.detailsCard}>
           <Text style={styles.sectionTitle}>Transaction Information</Text>
-
-          <DetailRow label="Transaction ID" value={transaction.id} copyable />
-          <DetailRow label="Date & Time" value={formatDate(transaction.date)} />
-          <DetailRow
-            label="Status"
-            value={transaction.status.replace("_", " ")}
-          />
-
-          {transaction.trackingId && (
-            <DetailRow
-              label="Tracking ID"
-              value={transaction.trackingId}
-              copyable
-            />
-          )}
-
-          {transaction.reference && (
-            <DetailRow
-              label="Reference"
-              value={transaction.reference}
-              copyable
-            />
-          )}
-        </View>
-
-        {/* Package Details (for send/receive transactions) */}
-        {(transaction.type === "send" || transaction.type === "receive") && (
-          <View style={styles.detailsCard}>
-            <Text style={styles.sectionTitle}>Package Details</Text>
-
-            {transaction.packageDescription && (
-              <DetailRow
-                label="Description"
-                value={transaction.packageDescription}
-              />
-            )}
-            {transaction.weight && (
-              <DetailRow label="Weight" value={transaction.weight} />
-            )}
-            {transaction.pickupAddress && (
-              <DetailRow
-                label="Pickup Address"
-                value={transaction.pickupAddress}
-              />
-            )}
-            {transaction.deliveryAddress && (
-              <DetailRow
-                label="Delivery Address"
-                value={transaction.deliveryAddress}
-              />
-            )}
-            {transaction.deliveryTime && (
-              <DetailRow
-                label="Delivery Time"
-                value={formatDate(transaction.deliveryTime)}
-              />
-            )}
-          </View>
-        )}
-
-        {/* Contact Details */}
-        {isSendOrReceive(transaction) &&
-          (transaction.recipient ||
-            transaction.sender ||
-            transaction.courierName) && (
-            <View style={styles.detailsCard}>
-              <Text style={styles.sectionTitle}>Contact Information</Text>
-
-              {transaction.recipient && (
-                <>
-                  <DetailRow label="Recipient" value={transaction.recipient} />
-                  {transaction.recipientPhone && (
-                    <DetailRow
-                      label="Recipient Phone"
-                      value={transaction.recipientPhone}
-                    />
-                  )}
-                </>
-              )}
-
-              {transaction.sender && (
-                <>
-                  <DetailRow label="Sender" value={transaction.sender} />
-                  {transaction.senderPhone && (
-                    <DetailRow
-                      label="Sender Phone"
-                      value={transaction.senderPhone}
-                    />
-                  )}
-                </>
-              )}
-
-              {transaction.courierName && (
-                <>
-                  <DetailRow label="Courier" value={transaction.courierName} />
-                  {transaction.courierPhone && (
-                    <DetailRow
-                      label="Courier Phone"
-                      value={transaction.courierPhone}
-                    />
-                  )}
-                </>
-              )}
+          <View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Transaction ID</Text>
+              <Text style={styles.detailValue}>{apiTx.id}</Text>
             </View>
-          )}
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Date & Time</Text>
+              <Text style={styles.detailValue}>
+                {new Date(apiTx.createdAt).toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Status</Text>
+              <Text style={styles.detailValue}>
+                {String(apiTx.status).replace(/_/g, " ")}
+              </Text>
+            </View>
+            {apiTx.reference ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Reference</Text>
+                <Text style={styles.detailValue}>{apiTx.reference}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
 
-        {/* Payment Details (for fund transactions) */}
-        {transaction.type === "fund" && (
+        {/* Package Details and Contacts for ORDER/DEPOSIT with order */}
+        {order && (apiTx.type === "ORDER" || apiTx.type === "DEPOSIT") && (
           <View style={styles.detailsCard}>
-            <Text style={styles.sectionTitle}>Payment Details</Text>
+            <Text style={styles.sectionTitle}>Package & Contact Details</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Pickup</Text>
+              <Text style={styles.detailValue}>{order.pickUpLocation}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Drop-off</Text>
+              <Text style={styles.detailValue}>{order.dropOffLocation}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Vehicle</Text>
+              <Text style={styles.detailValue}>{order.vehicleType}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>ETA</Text>
+              <Text style={styles.detailValue}>{order.eta}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Delivery Fee</Text>
+              <Text style={styles.detailValue}>
+                ₦{Number(order.deliveryFee || 0).toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Service Charge</Text>
+              <Text style={styles.detailValue}>
+                ₦{Number(order.serviceChargeAmount || 0).toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Total</Text>
+              <Text style={styles.detailValue}>
+                ₦{Number(order.totalAmount || 0).toLocaleString()}
+              </Text>
+            </View>
 
-            <DetailRow
-              label="Payment Method"
-              value={transaction.paymentMethod}
-            />
-            {transaction.bankName && (
-              <DetailRow label="Bank" value={transaction.bankName} />
-            )}
-            {transaction.accountNumber && (
-              <DetailRow
-                label="Account Number"
-                value={transaction.accountNumber}
-                copyable
-              />
-            )}
-            {transaction.sessionId && (
-              <DetailRow
-                label="Session ID"
-                value={transaction.sessionId}
-                copyable
-              />
-            )}
+            <View style={styles.separator} />
+            <Text style={styles.subSectionTitle}>Contact Information</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Sender</Text>
+              <Text style={styles.detailValue}>{contactSenderName}</Text>
+            </View>
+            {contactSenderPhone ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Sender Phone</Text>
+                <Text style={styles.detailValue}>{contactSenderPhone}</Text>
+              </View>
+            ) : null}
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Recipient</Text>
+              <Text style={styles.detailValue}>{contactRecipientName}</Text>
+            </View>
+            {contactRecipientPhone ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Recipient Phone</Text>
+                <Text style={styles.detailValue}>{contactRecipientPhone}</Text>
+              </View>
+            ) : null}
           </View>
         )}
-
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          {transaction.status === "completed" && (
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>Download Receipt</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -583,17 +467,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: rs(12),
     borderBottomWidth: rs(1),
+    gap: 10,
     borderBottomColor: "#f0f0f0",
   },
   detailLabel: {
     fontSize: rs(14),
     color: "#666",
-    flex: 1,
+    width: "50%",
   },
   detailValueContainer: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 2,
+    gap: rs(2),
     justifyContent: "flex-end",
   },
   detailValue: {
@@ -601,6 +486,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#000",
     textAlign: "right",
+    flex: 1,
+    overflow: "hidden",
   },
   copyIcon: {
     fontSize: rs(12),
@@ -639,5 +526,105 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: rs(18),
     color: "#666",
+  },
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: rs(20),
+  },
+  loadingText: {
+    marginTop: rs(12),
+    color: "#666",
+  },
+  // 404 styles
+  notFoundContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: rs(24),
+  },
+  notFoundCode: {
+    fontSize: rs(56),
+    fontWeight: "900",
+    color: "#e11d48",
+    marginBottom: rs(8),
+  },
+  notFoundTitle: {
+    fontSize: rs(20),
+    fontWeight: "bold",
+    color: "#000",
+    marginBottom: rs(6),
+  },
+  notFoundSubtitle: {
+    fontSize: rs(14),
+    color: "#666",
+    textAlign: "center",
+    marginBottom: rs(16),
+  },
+  notFoundButton: {
+    backgroundColor: "#000",
+    paddingHorizontal: rs(20),
+    paddingVertical: rs(12),
+    borderRadius: rs(12),
+  },
+  notFoundButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  // Dividers
+  separator: {
+    height: rs(1),
+    backgroundColor: "#f0f0f0",
+    marginVertical: rs(12),
+  },
+  subSectionTitle: {
+    fontSize: rs(16),
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: rs(6),
+  },
+  // Timeline
+  timelineContainer: {
+    marginTop: rs(4),
+  },
+  timelineItem: {
+    flexDirection: "row",
+    marginBottom: rs(16),
+  },
+  timelineLeft: {
+    width: rs(24),
+    alignItems: "center",
+  },
+  timelineDot: {
+    width: rs(10),
+    height: rs(10),
+    borderRadius: rs(5),
+    backgroundColor: "#00B624",
+  },
+  timelineLine: {
+    width: rs(2),
+    flex: 1,
+    backgroundColor: "#e5e7eb",
+    marginTop: rs(4),
+  },
+  timelineContent: {
+    flex: 1,
+  },
+  timelineStatus: {
+    fontSize: rs(14),
+    fontWeight: "600",
+    color: "#000",
+  },
+  timelineNote: {
+    fontSize: rs(13),
+    color: "#374151",
+    marginTop: rs(2),
+  },
+  timelineTime: {
+    fontSize: rs(12),
+    color: "#6b7280",
+    marginTop: rs(2),
   },
 });
