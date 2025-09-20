@@ -1,7 +1,7 @@
 "use client";
 
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,13 +13,20 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useUser } from "../../redux/hooks/hooks";
+import { useUser, useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
+import { useIsFocused } from "@react-navigation/native";
+import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
+import { userService } from "@/lib/api";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue(n * UI_SCALE);
 
 export default function ProfileScreen() {
-  const { logOut, user } = useUser();
+  const { logOut, user, access_token, setUser } = useUser();
+  const dispatch = useAppDispatch();
+  const isFocused = useIsFocused();
+  const selected = useAppSelector((s) => (s as any).locationSearch?.selected || null);
+
   const firstName = (user as any)?.firstName || "John";
   const lastName = (user as any)?.lastName || "Doe";
   const email = (user as any)?.email || "john.doe@example.com";
@@ -27,6 +34,8 @@ export default function ProfileScreen() {
   const countryCode = (user as any)?.countryCode || "+234";
   const profileImage = (user as any)?.profilePic || null;
   const phoneNumber = mobile ? `${countryCode}${mobile}` : "";
+  const usersAddress = (user as any)?.usersAddress || null;
+  const addressName = usersAddress?.name || "Not set";
 
   const handleEditProfile = () => {
     router.push("/profile/edit-profile");
@@ -35,6 +44,31 @@ export default function ProfileScreen() {
   const handleChangePassword = () => {
     router.push("/profile/change-password");
   };
+
+  // Apply selected address from full-screen search and update profile
+  useEffect(() => {
+    const applySelection = async () => {
+      if (!isFocused) return;
+      if (!selected || (selected as any).context !== "profileAddress") return;
+      try {
+        const title = (selected as any).title || (selected as any).subtitle || "";
+        const lat = (selected as any).lat;
+        const lon = (selected as any).lon;
+        if (typeof lat === "number" && typeof lon === "number") {
+          const resp = await userService.updateProfile({ usersAddress: { name: title, lat, lon } });
+          if (resp?.success && resp.data) {
+            await setUser({ access_token: access_token || null, user: resp.data as any });
+          }
+        }
+      } catch (_e) {
+        // ignore; non-blocking UI update
+      } finally {
+        dispatch(clearSelectedLocation());
+      }
+    };
+    applySelection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFocused, selected]);
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -126,6 +160,11 @@ export default function ProfileScreen() {
               value={phoneNumber}
               onPress={handleEditProfile}
             />
+            <ProfileItem
+              label="Address"
+              value={addressName}
+              onPress={() => router.push({ pathname: "/location-search", params: { context: "profileAddress" } })}
+            />
           </View>
         </View>
 
@@ -145,11 +184,11 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.card}>
-            <TouchableOpacity style={styles.profileItem}>
+            <TouchableOpacity style={styles.profileItem} onPress={() => router.push("/privacy-policy")}>
               <Text style={styles.accountActionText}>Privacy Policy</Text>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.profileItem}>
+            <TouchableOpacity style={styles.profileItem} onPress={() => router.push("/help-support")}>
               <Text style={styles.accountActionText}>Help & Support</Text>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>

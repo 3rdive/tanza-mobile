@@ -12,7 +12,6 @@ import { StatusBar } from "expo-status-bar";
 import React, { useMemo } from "react";
 import { Text, TextInput } from "react-native";
 
-SplashScreen.hide();
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -75,6 +74,8 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
+          <Stack.Screen name="privacy-policy" />
+          <Stack.Screen name="help-support" />
           <Stack.Screen name="+not-found" />
         </Stack>
       </AuthStack>

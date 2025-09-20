@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
-export const BASE_URL = "http://localhost:3030";
+export const BASE_URL = "https://8e458399612b.ngrok-free.app";
 export const AXIOS: AxiosInstance = axios.create({ baseURL: BASE_URL, timeout: 10000 });
 
 // Interceptors: log requests and responses
@@ -90,6 +90,12 @@ AXIOS.interceptors.response.use(
 // Types
 export type Role = "user" | "admin" | string;
 
+export interface IUsersAddress {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
 export interface IUser {
   id: string;
   firstName: string;
@@ -97,11 +103,12 @@ export interface IUser {
   role: Role;
 	email: string;
 	mobile: string;
- profilePic: string | null;
- countryCode: string;
- registrationDate: Date;
- updatedAt: Date;
- registrationMode: 'google' | 'apple' | 'manual';
+  profilePic: string | null;
+  countryCode: string;
+  registrationDate: Date | string;
+  updatedAt: Date | string;
+  registrationMode: 'google' | 'apple' | 'manual';
+  usersAddress?: IUsersAddress | null;
 }
 
 export interface IApiResponse<T> {
@@ -129,6 +136,7 @@ export interface ISignUpPayload {
   otp: string;
   profilePic?: string | null;
   countryCode: string; // e.g. "+234"
+  usersAddress: IUsersAddress;
 }
 
 export interface IOtpPayload {
@@ -246,6 +254,7 @@ export interface IUpdateProfilePayload {
   countryCode?: string;
   email?: string;
   mobile?: string;
+  usersAddress?: IUsersAddress;
 }
 
 export interface IUpdatePasswordPayload {
@@ -420,6 +429,47 @@ export interface ILocationFeature {
 export const locationService = {
   search: async (q: string) => {
     const { data } = await AXIOS.get<IApiResponse<ILocationFeature[]>>("/api/v1/location/search", { params: { q } });
+    return data;
+  },
+  reverse: async (lat: number, lon: number) => {
+    const { data } = await AXIOS.get<IApiResponse<any>>("/api/v1/location/reverse", { params: { lat, lon } });
+    return data;
+  },
+} as const;
+
+// Storage Media Upload Service
+export interface IRateRiderPayload {
+  riderId: string;
+  score: number; // 1-5
+  comment?: string;
+}
+
+export const ratingsService = {
+  rate: async (payload: IRateRiderPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<{ message: string }>>("/api/v1/ratings/rate", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return data;
+  },
+} as const;
+
+export const storageService = {
+  upload: async (file: { uri: string; name?: string; type?: string }) => {
+    const form = new FormData();
+    const filename = file.name || (file.uri.split("/").pop() || `upload-${Date.now()}.jpg`);
+    const mimetype = file.type || "image/jpeg";
+    form.append("file", {
+      // @ts-ignore React Native FormData file
+      uri: file.uri,
+      name: filename,
+      type: mimetype,
+    } as any);
+
+    const { data } = await AXIOS.post<IApiResponse<{ filename: string; mimetype: string; size: number; url: string }>>(
+      "/api/v1/storage-media/upload",
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
     return data;
   },
 } as const;

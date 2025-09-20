@@ -13,8 +13,14 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { userService } from "@/lib/api";
-import { useUser } from "@/redux/hooks/hooks";
+import { userService, locationService, ILocationFeature, storageService } from "@/lib/api";
+import { useUser, useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
+import { useIsFocused } from "@react-navigation/native";
+import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
+import { useDeviceLocation } from "@/hooks/location.hook";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -56,6 +62,19 @@ export default function EditProfileScreen(): JSX.Element {
     phoneNumber: initialPhoneDisplay,
   });
 
+  const initialUsersAddress = (user as any)?.usersAddress || null;
+  const [addressText, setAddressText] = useState<string>(initialUsersAddress?.name || "");
+  const [addressCoords, setAddressCoords] = useState<{ lat: number; lon: number } | null>(
+    initialUsersAddress && typeof initialUsersAddress.lat === "number" && typeof initialUsersAddress.lon === "number"
+      ? { lat: initialUsersAddress.lat, lon: initialUsersAddress.lon }
+      : null
+  );
+
+  const dispatch = useAppDispatch();
+  const isFocused = useIsFocused();
+  const selected = useAppSelector((s) => (s as any).locationSearch?.selected || null);
+  const { latitude, longitude, locationAddress } = useDeviceLocation();
+
   useEffect(() => {
     setFormData({
       firstName: initialFirst,
@@ -63,6 +82,13 @@ export default function EditProfileScreen(): JSX.Element {
       email: initialEmail,
       phoneNumber: initialPhoneDisplay,
     });
+    setAddressText((user as any)?.usersAddress?.name || "");
+    const ua = (user as any)?.usersAddress;
+    if (ua && typeof ua.lat === "number" && typeof ua.lon === "number") {
+      setAddressCoords({ lat: ua.lat, lon: ua.lon });
+    } else {
+      setAddressCoords(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFirst, initialLast, initialEmail, initialPhoneDisplay]);
 
@@ -106,6 +132,35 @@ export default function EditProfileScreen(): JSX.Element {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Consume selection from full-screen location search
+  useEffect(() => {
+    if (!isFocused) return;
+    if (selected && ((selected as any).context === "usersAddress" || !(selected as any).context)) {
+      const text = (selected as any).title || (selected as any).subtitle || "";
+      setAddressText(text);
+      if ((selected as any).lat && (selected as any).lon) {
+        setAddressCoords({ lat: (selected as any).lat, lon: (selected as any).lon });
+      } else {
+        setAddressCoords(null);
+      }
+      dispatch(clearSelectedLocation());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFocused, selected]);
+
+  const useCurrentLocation = () => {
+    try {
+      if (typeof latitude !== "number" || typeof longitude !== "number") {
+        Alert.alert("Location Error", "Unable to fetch current location");
+        return;
+      }
+      setAddressText(locationAddress || "Current Location");
+      setAddressCoords({ lat: latitude, lon: longitude });
+    } catch (e: any) {
+      Alert.alert("Location Error", e?.message || "Unable to fetch current location");
+    }
+  };
+
   const handleSave = async (): Promise<void> => {
     if (!validateForm()) {
       return;
@@ -135,14 +190,17 @@ export default function EditProfileScreen(): JSX.Element {
       }
       mobile = mobile.replace(/\D/g, "");
 
-      const payload = {
+      const payload: any = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         profilePic: (user as any)?.profilePic || null,
         countryCode,
         email: formData.email.trim(),
         mobile,
-      } as const;
+      };
+      if (addressText && addressCoords) {
+        payload.usersAddress = { name: addressText, lat: addressCoords.lat, lon: addressCoords.lon };
+      }
 
       const resp = await userService.updateProfile(payload);
       if (resp?.success && resp.data) {
@@ -211,16 +269,49 @@ export default function EditProfileScreen(): JSX.Element {
         {/* Profile Picture Section */}
         <View style={styles.profilePictureSection}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>
-                {formData.firstName[0]?.toUpperCase() || "J"}
-                {formData.lastName[0]?.toUpperCase() || "D"}
-              </Text>
-            </View>
+            {Boolean((user as any)?.profilePic) ? (
+              <Image source={{ uri: (user as any)?.profilePic as string }} style={styles.avatarFallback} contentFit="cover" />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarText}>
+                  {formData.firstName[0]?.toUpperCase() || "J"}
+                  {formData.lastName[0]?.toUpperCase() || "D"}
+                </Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={styles.changePhotoButton}
             disabled={isLoading}
+            onPress={async () => {
+              try {
+                const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (perm.status !== "granted") {
+                  Alert.alert("Permission needed", "We need access to your photos to change your profile picture.");
+                  return;
+                }
+                const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1,1], quality: 0.8 });
+                if (result.canceled) return;
+                const uri = result.assets?.[0]?.uri;
+                if (!uri) return;
+                const resp = await storageService.upload({ uri, type: "image/jpeg" });
+                if (resp?.success) {
+                  const url = (resp.data as any)?.url as string;
+                  if (url) {
+                    const update = await userService.updateProfile({ profilePic: url });
+                    if (update?.success && update.data) {
+                      await setUser({ access_token: access_token || null, user: update.data as any });
+                    } else {
+                      Alert.alert("Update failed", update?.message || "Unable to update profile photo");
+                    }
+                  }
+                } else {
+                  Alert.alert("Upload failed", resp?.message || "Unable to upload image");
+                }
+              } catch (e: any) {
+                Alert.alert("Error", e?.response?.data?.message || e?.message || "Unable to change photo");
+              }
+            }}
           >
             <Text style={styles.changePhotoText}>Change Photo</Text>
           </TouchableOpacity>
@@ -290,6 +381,37 @@ export default function EditProfileScreen(): JSX.Element {
             {errors.phoneNumber && (
               <Text style={styles.errorText}>{errors.phoneNumber}</Text>
             )}
+          </View>
+
+          {/* Address Field with full-screen search */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Your Address</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                value={addressText}
+                placeholder="Search address (e.g., Victoria Island)"
+                onFocus={() => router.push({ pathname: "/location-search", params: { context: "usersAddress" } })}
+                showSoftInputOnFocus={false}
+                caretHidden
+              />
+              {!!addressText && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear address"
+                  onPress={() => {
+                    setAddressText("");
+                    setAddressCoords(null);
+                  }}
+                  style={styles.clearBtn}
+                >
+                  <MaterialIcons name="cancel" size={24} color="red" />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity onPress={useCurrentLocation} style={styles.useLocationBtn}>
+              <Text style={styles.useLocationBtnText}>Use current location</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -446,5 +568,36 @@ const styles = StyleSheet.create({
     color: "#666",
     lineHeight: rs(20),
     textAlign: "center",
+  },
+  useLocationBtn: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    backgroundColor: "#f0f9f1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#d6f5db",
+  },
+  useLocationBtnText: {
+    color: "#00B624",
+    fontWeight: "600",
+  },
+  inputWrapper: {
+    position: "relative",
+  },
+  clearBtn: {
+    position: "absolute",
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  clearBtnText: {
+    fontSize: rs(18),
+    color: "#999",
+    fontWeight: "600",
   },
 });

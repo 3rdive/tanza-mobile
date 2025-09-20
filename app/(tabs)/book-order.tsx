@@ -1,6 +1,13 @@
+import { ILocationFeature, locationService, orderService } from "@/lib/api";
+import { useAppDispatch, useAppSelector, useUser } from "@/redux/hooks/hooks";
+import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
+import { poppinsFonts } from "@/theme/fonts";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   SafeAreaView,
@@ -10,11 +17,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { poppinsFonts } from "@/theme/fonts";
-import { locationService, ILocationFeature, orderService } from "@/lib/api";
 
 const UI_SCALE = 0.82; // globally downscale sizes
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -28,7 +32,7 @@ interface LocationSuggestion {
 
 interface BookingFormData {
   pickupLocation: string;
-  dropoffLocation: string;
+  dropOffLocation: string;
   noteForRider: string;
   vehicleType: "rider" | "van";
   numberOfItems: number;
@@ -40,19 +44,29 @@ const mockLocations: LocationSuggestion[] = [
   { id: "3", title: "Lekki Phase 1", subtitle: "Lekki Phase 1, Lagos" },
   { id: "4", title: "Wuse 2", subtitle: "Wuse 2, Abuja" },
   { id: "5", title: "Garki Area 11", subtitle: "Garki Area 11, Abuja" },
-  { id: "6", title: "Port Harcourt GRA", subtitle: "GRA Phase 2, Port Harcourt" },
+  {
+    id: "6",
+    title: "Port Harcourt GRA",
+    subtitle: "GRA Phase 2, Port Harcourt",
+  },
 ];
 
-
 const defaultFormData: BookingFormData = {
- pickupLocation: "",
- dropoffLocation: "",
- noteForRider: "",
- vehicleType: "rider",
- numberOfItems: 1,
-}
+  pickupLocation: "",
+  dropOffLocation: "",
+  noteForRider: "",
+  vehicleType: "rider",
+  numberOfItems: 1,
+};
 export default function BookLogisticsScreen() {
-  const [formData, setFormData] = useState<BookingFormData>({ ...defaultFormData });
+  const isFocused = useIsFocused();
+  const dispatch = useAppDispatch();
+  const selected = useAppSelector(
+    (s) => (s as any).locationSearch?.selected || null
+  );
+  const [formData, setFormData] = useState<BookingFormData>({
+    ...defaultFormData,
+  });
   const [isBooking, setIsBooking] = useState(false);
 
   const [pickupSuggestions, setPickupSuggestions] = useState<
@@ -68,18 +82,31 @@ export default function BookLogisticsScreen() {
   const [serviceCharge, setServiceCharge] = useState<number | null>(null);
   const [eta, setEta] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [pickupCoords, setPickupCoords] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(null);
+  const [dropoffCoords, setDropoffCoords] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(null);
+
+  // User default address
+  const { user } = useUser();
+  const defaultAddress = ((user as any)?.usersAddress ?? null) as {
+    name?: string;
+    lat?: number;
+    lon?: number;
+  } | null;
 
   // Animation values
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const priceAnim = useRef(new Animated.Value(0)).current;
   const vehicleSelectAnim = useRef(new Animated.Value(0)).current;
- const { send_type } = useLocalSearchParams();
+  const { send_type } = useLocalSearchParams();
 
-
- useEffect(() => {
+  useEffect(() => {
     // Initial entrance animation
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -94,6 +121,38 @@ export default function BookLogisticsScreen() {
       }),
     ]).start();
   }, []);
+
+  // Apply selected location from full-screen search when returning focused
+  useEffect(() => {
+    if (!isFocused) return;
+    if (selected) {
+      const text = (selected as any).title || (selected as any).subtitle || "";
+      if ((selected as any).context === "pickup") {
+        setFormData((prev) => ({ ...prev, pickupLocation: text }));
+        if ((selected as any).lat && (selected as any).lon) {
+          setPickupCoords({
+            lat: (selected as any).lat,
+            lon: (selected as any).lon,
+          });
+        } else {
+          setPickupCoords(null);
+        }
+        setShowPickupSuggestions(false);
+      } else if ((selected as any).context === "dropoff") {
+        setFormData((prev) => ({ ...prev, dropOffLocation: text }));
+        if ((selected as any).lat && (selected as any).lon) {
+          setDropoffCoords({
+            lat: (selected as any).lat,
+            lon: (selected as any).lon,
+          });
+        } else {
+          setDropoffCoords(null);
+        }
+        setShowDropoffSuggestions(false);
+      }
+      dispatch(clearSelectedLocation());
+    }
+  }, [isFocused, selected]);
 
   useEffect(() => {
     // Calculate price when both coordinates are selected
@@ -134,11 +193,17 @@ export default function BookLogisticsScreen() {
         }).start();
       } else {
         setCalculatedPrice(null);
-        Alert.alert("Pricing Error", res?.message || "Unable to calculate price");
+        Alert.alert(
+          "Pricing Error",
+          res?.message || "Unable to calculate price"
+        );
       }
     } catch (e: any) {
       console.error(e);
-      Alert.alert("Pricing Error", e?.response?.data?.message || e?.message || "Unable to calculate price");
+      Alert.alert(
+        "Pricing Error",
+        e?.response?.data?.message || e?.message || "Unable to calculate price"
+      );
       setCalculatedPrice(null);
     } finally {
       setIsCalculating(false);
@@ -173,7 +238,9 @@ export default function BookLogisticsScreen() {
         const subtitle = parts.filter(Boolean).join(", ");
         const title = p.name || subtitle || `${p.type || "Location"}`;
         return {
-          id: `${p.osm_type || ""}_${p.osm_id || Math.random().toString(36).slice(2)}`,
+          id: `${p.osm_type || ""}_${
+            p.osm_id || Math.random().toString(36).slice(2)
+          }`,
           title,
           subtitle,
           lon: g?.coordinates?.[0],
@@ -181,10 +248,14 @@ export default function BookLogisticsScreen() {
         };
       });
 
-      const results = mapped.length > 0 ? mapped : mockLocations.filter((m) =>
-        m.title.toLowerCase().includes(query.toLowerCase()) ||
-        m.subtitle.toLowerCase().includes(query.toLowerCase())
-      );
+      const results =
+        mapped.length > 0
+          ? mapped
+          : mockLocations.filter(
+              (m) =>
+                m.title.toLowerCase().includes(query.toLowerCase()) ||
+                m.subtitle.toLowerCase().includes(query.toLowerCase())
+            );
 
       if (type === "pickup") {
         setPickupSuggestions(results);
@@ -215,14 +286,22 @@ export default function BookLogisticsScreen() {
     location: LocationSuggestion,
     type: "pickup" | "dropoff"
   ) => {
-    const text =  location.title || location.subtitle || "";
+    const text = location.title || location.subtitle || "";
     if (type === "pickup") {
       setFormData((prev) => ({ ...prev, pickupLocation: text }));
-      setPickupCoords(location.lat && location.lon ? { lat: location.lat, lon: location.lon } : null);
+      setPickupCoords(
+        location.lat && location.lon
+          ? { lat: location.lat, lon: location.lon }
+          : null
+      );
       setShowPickupSuggestions(false);
     } else {
-      setFormData((prev) => ({ ...prev, dropoffLocation: text }));
-      setDropoffCoords(location.lat && location.lon ? { lat: location.lat, lon: location.lon } : null);
+      setFormData((prev) => ({ ...prev, dropOffLocation: text }));
+      setDropoffCoords(
+        location.lat && location.lon
+          ? { lat: location.lat, lon: location.lon }
+          : null
+      );
       setShowDropoffSuggestions(false);
     }
   };
@@ -245,8 +324,83 @@ export default function BookLogisticsScreen() {
     ]).start();
   };
 
+  // Helper to compare names/coordinates
+  const coordsEqual = (
+    a?: { lat?: number; lon?: number } | null,
+    b?: { lat?: number; lon?: number } | null
+  ) => {
+    if (!a || !b) return false;
+    if (
+      typeof a.lat !== "number" ||
+      typeof a.lon !== "number" ||
+      typeof b.lat !== "number" ||
+      typeof b.lon !== "number"
+    )
+      return false;
+    const eps = 1e-6;
+    return Math.abs(a.lat - b.lat) < eps && Math.abs(a.lon - b.lon) < eps;
+  };
+  const nameEqual = (a?: string | null, b?: string | null) => {
+    return (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
+  };
+
+  const setDefaultFor = (type: "pickup" | "dropoff") => {
+    if (
+      !defaultAddress ||
+      typeof defaultAddress.lat !== "number" ||
+      typeof defaultAddress.lon !== "number"
+    ) {
+      Alert.alert(
+        "No default address",
+        "Please set your address in Profile first."
+      );
+      return;
+    }
+    const defName = defaultAddress.name || "My address";
+    const defCoords = {
+      lat: defaultAddress.lat as number,
+      lon: defaultAddress.lon as number,
+    };
+
+    if (type === "pickup") {
+      // prevent same pickup and dropoff
+      if (
+        coordsEqual(dropoffCoords, defCoords) ||
+        nameEqual(formData.dropOffLocation, defName)
+      ) {
+        Alert.alert(
+          "Invalid selection",
+          "Pickup and drop-off cannot be the same."
+        );
+        return;
+      }
+      setFormData((p) => ({ ...p, pickupLocation: defName }));
+      setPickupCoords(defCoords);
+      setShowPickupSuggestions(false);
+    } else {
+      if (
+        coordsEqual(pickupCoords, defCoords) ||
+        nameEqual(formData.pickupLocation, defName)
+      ) {
+        Alert.alert(
+          "Invalid selection",
+          "Pickup and drop-off cannot be the same."
+        );
+        return;
+      }
+      setFormData((p) => ({ ...p, dropOffLocation: defName }));
+      setDropoffCoords(defCoords);
+      setShowDropoffSuggestions(false);
+    }
+  };
+
   const handleBooking = () => {
-    if (!formData.pickupLocation || !formData.dropoffLocation || !pickupCoords || !dropoffCoords) {
+    if (
+      !formData.pickupLocation ||
+      !formData.dropOffLocation ||
+      !pickupCoords ||
+      !dropoffCoords
+    ) {
       Alert.alert(
         "Missing Information",
         "Please select both pickup and dropoff locations from the suggestions"
@@ -283,7 +437,7 @@ export default function BookLogisticsScreen() {
                   vehicleType: vehicle,
                 },
                 {
-                  dropOffLocation: formData.dropoffLocation,
+                  dropOffLocation: formData.dropOffLocation,
                   pickUpLocation: formData.pickupLocation,
                   userOrderRole: (send_type ?? "sender") as string,
                   vehicleType: vehicle,
@@ -293,9 +447,13 @@ export default function BookLogisticsScreen() {
 
               if (res?.success) {
                 Alert.alert("Success", "Order created successfully", [
-                  { text: "OK", onPress: () => {
-									 setFormData(defaultFormData)
-									 router.push('/(tabs)/history') }},
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      setFormData(defaultFormData);
+                      router.push("/(tabs)/history");
+                    },
+                  },
                 ]);
               } else {
                 const msg = res?.message || "Unable to create order";
@@ -305,7 +463,10 @@ export default function BookLogisticsScreen() {
                     "Your wallet balance is insufficient. Would you like to fund your wallet now?",
                     [
                       { text: "Cancel", style: "cancel" },
-                      { text: "Fund Wallet", onPress: () => router.push("/payment") },
+                      {
+                        text: "Fund Wallet",
+                        onPress: () => router.push("/payment"),
+                      },
                     ]
                   );
                 } else {
@@ -313,14 +474,20 @@ export default function BookLogisticsScreen() {
                 }
               }
             } catch (e: any) {
-              const msg = e?.response?.data?.message || e?.message || "Unable to create order";
+              const msg =
+                e?.response?.data?.message ||
+                e?.message ||
+                "Unable to create order";
               if (/insufficient balance/i.test(String(msg))) {
                 Alert.alert(
                   "Insufficient Balance",
                   "Your wallet balance is insufficient. Would you like to fund your wallet now?",
                   [
                     { text: "Cancel", style: "cancel" },
-                    { text: "Fund Wallet", onPress: () => router.push("/payment") },
+                    {
+                      text: "Fund Wallet",
+                      onPress: () => router.push("/payment"),
+                    },
                   ]
                 );
               } else {
@@ -335,6 +502,14 @@ export default function BookLogisticsScreen() {
     );
   };
 
+  let isDisabled =
+    isCalculating ||
+    isBooking ||
+    !formData.pickupLocation ||
+    !formData.dropOffLocation ||
+    !pickupCoords ||
+    !dropoffCoords ||
+    !calculatedPrice;
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -343,7 +518,11 @@ export default function BookLogisticsScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: rs(140) }}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: rs(140) }}
+      >
         <Animated.View
           style={[
             styles.formContainer,
@@ -374,21 +553,52 @@ export default function BookLogisticsScreen() {
             <View
               style={[
                 styles.locationInputContainer,
-                (showPickupSuggestions && pickupSuggestions.length > 0) && styles.raised,
+                showPickupSuggestions &&
+                  pickupSuggestions.length > 0 &&
+                  styles.raised,
               ]}
             >
               <Text style={styles.inputLabel}>📍 Pickup Location</Text>
-              <TextInput
-                style={styles.locationInput}
-                value={formData.pickupLocation}
-                onChangeText={(text) => {
-                  setFormData((prev) => ({ ...prev, pickupLocation: text }));
-                  setPickupCoords(null);
-                  searchLocations(text, "pickup");
-                }}
-                placeholder="Where should we pick up from?"
-                placeholderTextColor="#999"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.locationInput}
+                  value={formData.pickupLocation}
+                  onFocus={() =>
+                    router.push({
+                      pathname: "/location-search",
+                      params: { context: "pickup" },
+                    })
+                  }
+                  showSoftInputOnFocus={false}
+                  caretHidden
+                  placeholder="Where should we pick up from?"
+                  placeholderTextColor="#999"
+                />
+                {!!formData.pickupLocation && (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear pickup location"
+                    onPress={() => {
+                      setFormData((p) => ({ ...p, pickupLocation: "" }));
+                      setPickupCoords(null);
+                      setShowPickupSuggestions(false);
+                    }}
+                    style={styles.clearBtn}
+                  >
+                    <MaterialIcons name="cancel" size={24} color="red" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {defaultAddress && (
+                <TouchableOpacity
+                  style={styles.defaultAddrBtn}
+                  onPress={() => setDefaultFor("pickup")}
+                >
+                  <Text style={styles.defaultAddrBtnText}>
+                    Use my default address
+                  </Text>
+                </TouchableOpacity>
+              )}
               {showPickupSuggestions && pickupSuggestions.length > 0 && (
                 <Animated.View
                   style={[styles.suggestionsContainer, { opacity: fadeAnim }]}
@@ -399,7 +609,9 @@ export default function BookLogisticsScreen() {
                       style={styles.suggestionItem}
                       onPress={() => selectLocation(location, "pickup")}
                     >
-                      <Text style={styles.suggestionName}>{location.title}</Text>
+                      <Text style={styles.suggestionName}>
+                        {location.title}
+                      </Text>
                       <Text style={styles.suggestionAddress}>
                         {location.subtitle}
                       </Text>
@@ -418,21 +630,52 @@ export default function BookLogisticsScreen() {
             <View
               style={[
                 styles.locationInputContainer,
-                (showDropoffSuggestions && dropoffSuggestions.length > 0) && styles.raised,
+                showDropoffSuggestions &&
+                  dropoffSuggestions.length > 0 &&
+                  styles.raised,
               ]}
             >
               <Text style={styles.inputLabel}>🎯 Drop-off Location</Text>
-              <TextInput
-                style={styles.locationInput}
-                value={formData.dropoffLocation}
-                onChangeText={(text) => {
-                  setFormData((prev) => ({ ...prev, dropoffLocation: text }));
-                  setDropoffCoords(null);
-                  searchLocations(text, "dropoff");
-                }}
-                placeholder="Where should we deliver to?"
-                placeholderTextColor="#999"
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.locationInput}
+                  value={formData.dropOffLocation}
+                  onFocus={() =>
+                    router.push({
+                      pathname: "/location-search",
+                      params: { context: "dropoff" },
+                    })
+                  }
+                  showSoftInputOnFocus={false}
+                  caretHidden
+                  placeholder="Where should we deliver to?"
+                  placeholderTextColor="#999"
+                />
+                {!!formData.dropOffLocation && (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear drop-off location"
+                    onPress={() => {
+                      setFormData((p) => ({ ...p, dropOffLocation: "" }));
+                      setDropoffCoords(null);
+                      setShowDropoffSuggestions(false);
+                    }}
+                    style={styles.clearBtn}
+                  >
+                    <MaterialIcons name="cancel" size={24} color="red" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {defaultAddress && (
+                <TouchableOpacity
+                  style={styles.defaultAddrBtn}
+                  onPress={() => setDefaultFor("dropoff")}
+                >
+                  <Text style={styles.defaultAddrBtnText}>
+                    Use my default address
+                  </Text>
+                </TouchableOpacity>
+              )}
               {showDropoffSuggestions && dropoffSuggestions.length > 0 && (
                 <Animated.View
                   style={[styles.suggestionsContainer, { opacity: fadeAnim }]}
@@ -443,7 +686,9 @@ export default function BookLogisticsScreen() {
                       style={styles.suggestionItem}
                       onPress={() => selectLocation(location, "dropoff")}
                     >
-                      <Text style={styles.suggestionName}>{location.title}</Text>
+                      <Text style={styles.suggestionName}>
+                        {location.title}
+                      </Text>
                       <Text style={styles.suggestionAddress}>
                         {location.subtitle}
                       </Text>
@@ -502,42 +747,47 @@ export default function BookLogisticsScreen() {
             />
           </View>
         </Animated.View>
-
       </ScrollView>
 
       <View style={styles.priceContainer}>
         <View>
           {isCalculating ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               <ActivityIndicator size="small" color="#000" />
-              <Text style={{ marginLeft: 8, fontSize: rs(16), color: '#333' }}>Calculating…</Text>
+              <Text style={{ marginLeft: 8, fontSize: rs(16), color: "#333" }}>
+                Calculating…
+              </Text>
             </View>
           ) : (
             <>
-              <Text style={[styles.price, { color: 'black' }]}>₦{calculatedPrice?.toLocaleString() || 0}</Text>
+              <Text style={[styles.price, { color: "black" }]}>
+                ₦{calculatedPrice?.toLocaleString() || 0}
+              </Text>
               <Text style={styles.amountSubtitle}>TOTAL AMOUNT</Text>
             </>
           )}
         </View>
-        <TouchableOpacity
-          onPress={handleBooking}
-          disabled={
-            isCalculating ||
-            isBooking ||
-            !formData.pickupLocation ||
-            !formData.dropoffLocation ||
-            !pickupCoords ||
-            !dropoffCoords ||
-            !calculatedPrice
-          }
-        >
+        <TouchableOpacity onPress={handleBooking} disabled={isDisabled}>
           {isBooking ? (
-            <View style={[styles.placeOrder, { flexDirection: 'row' }]}>
+            <View style={[styles.placeOrder, { flexDirection: "row" }]}>
               <ActivityIndicator size="small" color="#fff" />
-              <Text style={{ color: '#fff', marginLeft: 8, fontSize: rs(18), fontWeight: '600' }}>Booking…</Text>
+              <Text
+                style={{
+                  color: "#fff",
+                  marginLeft: 8,
+                  fontSize: rs(18),
+                  fontWeight: "600",
+                }}
+              >
+                Booking…
+              </Text>
             </View>
           ) : (
-            <Text style={[styles.placeOrder]}>Book Now</Text>
+            <Text
+              style={[styles.placeOrder, { opacity: isDisabled ? 0.5 : 1 }]}
+            >
+              Book Now
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -630,6 +880,23 @@ const styles = StyleSheet.create({
     fontSize: rs(14),
     backgroundColor: "#f8f9fa",
   },
+  inputWrapper: {
+    position: "relative",
+  },
+  clearBtn: {
+    position: "absolute",
+    right: rs(10),
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: rs(6),
+  },
+  clearBtnText: {
+    fontSize: rs(18),
+    color: "#999",
+    fontWeight: "600",
+  },
   locationConnector: {
     alignItems: "center",
     paddingVertical: rs(12),
@@ -675,6 +942,21 @@ const styles = StyleSheet.create({
   suggestionAddress: {
     fontSize: rs(14),
     color: "#666",
+  },
+  defaultAddrBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f0f9f1",
+    borderRadius: rs(10),
+    paddingHorizontal: rs(12),
+    paddingVertical: rs(8),
+    borderWidth: 1,
+    borderColor: "#d6f5db",
+    marginTop: rs(8),
+  },
+  defaultAddrBtnText: {
+    color: "#00B624",
+    fontWeight: "600",
+    fontSize: rs(12),
   },
   vehicleSection: {
     backgroundColor: "#fff",
@@ -860,41 +1142,41 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   priceContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: rs(16),
     paddingVertical: rs(12),
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    justifyContent: 'space-between',
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
+    borderTopColor: "#eee",
+    justifyContent: "space-between",
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 10,
   },
   bookingOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   bookingOverlayBox: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingVertical: rs(20),
     paddingHorizontal: rs(24),
     borderRadius: rs(12),
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -903,8 +1185,8 @@ const styles = StyleSheet.create({
   bookingOverlayText: {
     marginTop: rs(10),
     fontSize: rs(16),
-    fontWeight: '600',
-    color: '#222',
+    fontWeight: "600",
+    color: "#222",
   },
   price: {
     fontSize: rs(32),

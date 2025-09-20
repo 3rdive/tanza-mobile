@@ -1,27 +1,10 @@
-{
-  "data": {
-    "data": {
-      "createdAt": "2025-09-16T15:15:26.636Z",
-      "customerCode": "CUS_fwcsn41yjc1mqxf",
-      "id": "56bd48eb-1568-4e7b-8b31-83f59c91fea2",
-      "isFrozen": false,
-      "walletBalance": "0.00"
-    },
-    "message": "Request successful",
-    "success": true
-  },
-  "headers": {
-    "access-control-allow-origin": "*",
-    "connection": "keep-alive",
-    "content-length": "216",
-    "content-type": "application/json; charset=utf-8",
-    "date": "Tue, 16 Sep 2025 15:31:44 GMT",
-    "etag": "W/\"d8-ATFLLQjlF/2LDvw0atNZgQJav3I\"",
-    "keep-alive": "timeout=5",
-    "x-powered-by": "Express"
-  },
-  "method": "get",
-  "status": 200,
-  "statusText": undefined,
-  "url": "/api/v1/wallet"
-}
+[
+  {
+    "createdAt": "2025-09-19T14:15:04.390Z",
+    "id": "71f0c093-ffc6-4c3d-a442-5d99b81af0ed",
+    "note": "Order created",
+    "orderId": "00e0378b-873d-4695-bc70-f29b2aff4e3f",
+    "status": "picked_up",
+    "updatedAt": "2025-09-19T14:15:04.390Z"
+  }
+]

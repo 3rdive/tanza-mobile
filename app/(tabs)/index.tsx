@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { Image } from "expo-image";
 const UI_SCALE = 0.82; // globally downscale sizes ~18%
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
@@ -199,9 +200,17 @@ export default function HomeScreen() {
             </Text>
           </View>
           <TouchableOpacity style={styles.profileButton}>
-            <Text style={styles.profileIcon} allowFontScaling={false}>
-              👤
-            </Text>
+            {Boolean((user as any)?.profilePic) ? (
+              <Image
+                source={{ uri: (user as any)?.profilePic as string }}
+                style={styles.profileAvatar}
+                contentFit="cover"
+              />
+            ) : (
+              <Text style={styles.profileIcon} allowFontScaling={false}>
+                👤
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -284,7 +293,7 @@ export default function HomeScreen() {
             </Text>
             <TouchableOpacity
               style={styles.fundWalletButton}
-              onPress={() => router.push("/payment")}
+              onPress={() => router.push("/rider/rider-wallet")}
             >
               <Text style={styles.fundWalletText} allowFontScaling={false}>
                 Fund Wallet
@@ -393,6 +402,11 @@ const styles = StyleSheet.create({
   profileIcon: {
     fontSize: rs(20),
     color: "#fff",
+  },
+  profileAvatar: {
+    width: rs(40),
+    height: rs(40),
+    borderRadius: rs(20),
   },
   balanceCard: {
     backgroundColor: "#00B624",

@@ -34,7 +34,7 @@ export default function EmailEntryScreen() {
       return;
     }
     setAuthEmail(email);
-    router.push("/(auth)/completion");
+    router.push("/completion");
   };
 
   // When email changes and is valid, check if it already exists

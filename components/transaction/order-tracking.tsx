@@ -11,7 +11,6 @@ export enum TrackingStatus {
   CANCELLED = "cancelled",
 }
 
-
 type Props = {
   trackingData: { status: TrackingStatus }[];
 };
@@ -25,13 +24,15 @@ const STATUSES: TrackingStatus[] = [
 ];
 
 const colors = {
-  active: "#4CAF50",
+  active: "#09bc10",
   inactive: "#BDBDBD",
   cancelled: "#F44336",
 };
 
 const ProgressTracker: React.FC<Props> = ({ trackingData }) => {
   const latestStatus = trackingData[trackingData.length - 1]?.status;
+  console.log({ latestStatus });
+  console.log({ trackingData });
 
   const isCancelled = latestStatus === TrackingStatus.CANCELLED;
   const currentIndex = isCancelled
@@ -110,6 +111,7 @@ const styles = StyleSheet.create({
   stepContainer: {
     flex: 1,
     alignItems: "center",
+    position: "relative",
   },
   circle: {
     width: 32,
@@ -118,6 +120,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 6,
+    position: "relative",
+    zIndex: 2,
   },
   currentCircle: {
     borderWidth: 2,
@@ -131,6 +135,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     textTransform: "capitalize",
+    position: "relative",
+    zIndex: 2,
   },
   cancelledLabel: {
     textDecorationLine: "line-through",
@@ -141,6 +147,7 @@ const styles = StyleSheet.create({
     right: -40,
     height: 2,
     width: 80,
+    zIndex: 1,
   },
 });
 
