@@ -1,3 +1,4 @@
+import { StorageMechanics } from "@/lib/storage-mechanics";
 import { useUser } from "@/redux/hooks/hooks";
 import {
   Stack,
@@ -13,13 +14,19 @@ type AuthStackProps = {
 };
 
 export default function AuthStack({ children }: AuthStackProps) {
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, user } = useUser();
   const segments = useSegments();
   const router = useRouter();
   const rootNavigationState = useRootNavigationState();
+ console.log("is_user_auth", user);
 
-  useEffect(() => {
+
+ useEffect(() => {
+	 // StorageMechanics.clear()
     // Wait for the root navigation to be ready to avoid race conditions
+
+		console.log("rootNavigationState", rootNavigationState?.key);
+		console.log("is_user_auth", user);
     if (!rootNavigationState?.key) return;
 
     const inAuthGroup = segments[0] === "(auth)";

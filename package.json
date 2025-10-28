@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start -c",
+    "start": "expo start -c --port 8084",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -49,7 +49,8 @@
     "react-native-webview": "13.13.5",
     "react-redux": "^9.2.0",
     "expo-location": "~18.1.6",
-    "expo-image-picker": "~16.1.4"
+    "expo-image-picker": "~16.1.4",
+    "jwt-check-expiry": "^1.0.10"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

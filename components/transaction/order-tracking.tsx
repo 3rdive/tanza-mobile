@@ -24,9 +24,18 @@ const STATUSES: TrackingStatus[] = [
 ];
 
 const colors = {
-  active: "#09bc10",
   inactive: "#BDBDBD",
   cancelled: "#F44336",
+};
+
+// Vary circle/label/line color by status
+const statusColorMap: Record<TrackingStatus, string> = {
+  [TrackingStatus.PENDING]: "#FFA500", // orange
+  [TrackingStatus.ACCEPTED]: "#3b82f6", // blue
+  [TrackingStatus.PICKED_UP]: "#f59e0b", // amber
+  [TrackingStatus.TRANSIT]: "#f59e0b", // amber
+  [TrackingStatus.DELIVERED]: "#09bc10", // green
+  [TrackingStatus.CANCELLED]: colors.cancelled, // red
 };
 
 const ProgressTracker: React.FC<Props> = ({ trackingData }) => {
@@ -44,12 +53,13 @@ const ProgressTracker: React.FC<Props> = ({ trackingData }) => {
       {STATUSES.map((status, index) => {
         const isCompleted = index <= currentIndex;
         const isCurrent = index === currentIndex;
+        const baseColor = statusColorMap[status] ?? colors.inactive;
 
         // if cancelled, strike through remaining steps
         const stepColor = isCancelled
           ? colors.cancelled
           : isCompleted
-          ? colors.active
+          ? baseColor
           : colors.inactive;
 
         return (
@@ -86,11 +96,12 @@ const ProgressTracker: React.FC<Props> = ({ trackingData }) => {
                 style={[
                   styles.line,
                   {
-                    backgroundColor: isCompleted
-                      ? colors.active
+                    backgroundColor: isCancelled
+                      ? colors.cancelled
+                      : index < currentIndex
+                      ? baseColor
                       : colors.inactive,
                   },
-                  isCancelled && { backgroundColor: colors.cancelled },
                 ]}
               />
             )}

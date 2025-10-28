@@ -1,4 +1,4 @@
-import { ILocationFeature, locationService, orderService } from "@/lib/api";
+import { orderService } from "@/lib/api";
 import { useAppDispatch, useAppSelector, useUser } from "@/redux/hooks/hooks";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { poppinsFonts } from "@/theme/fonts";
@@ -37,19 +37,6 @@ interface BookingFormData {
   vehicleType: "rider" | "van";
   numberOfItems: number;
 }
-
-const mockLocations: LocationSuggestion[] = [
-  { id: "1", title: "Victoria Island", subtitle: "Victoria Island, Lagos" },
-  { id: "2", title: "Ikeja GRA", subtitle: "Ikeja GRA, Lagos" },
-  { id: "3", title: "Lekki Phase 1", subtitle: "Lekki Phase 1, Lagos" },
-  { id: "4", title: "Wuse 2", subtitle: "Wuse 2, Abuja" },
-  { id: "5", title: "Garki Area 11", subtitle: "Garki Area 11, Abuja" },
-  {
-    id: "6",
-    title: "Port Harcourt GRA",
-    subtitle: "GRA Phase 2, Port Harcourt",
-  },
-];
 
 const defaultFormData: BookingFormData = {
   pickupLocation: "",
@@ -207,78 +194,6 @@ export default function BookLogisticsScreen() {
       setCalculatedPrice(null);
     } finally {
       setIsCalculating(false);
-    }
-  };
-
-  const searchLocations = async (query: string, type: "pickup" | "dropoff") => {
-    if (query.length < 2) {
-      if (type === "pickup") {
-        setPickupSuggestions([]);
-        setShowPickupSuggestions(false);
-      } else {
-        setDropoffSuggestions([]);
-        setShowDropoffSuggestions(false);
-      }
-      return;
-    }
-
-    try {
-      const res = await locationService.search(query);
-      const features = (res?.data || []) as ILocationFeature[];
-
-      const mapped: LocationSuggestion[] = features.map((f) => {
-        const p = f.properties || ({} as any);
-        const g = f.geometry || ({} as any);
-        const parts: string[] = [];
-        if (p.street) parts.push(p.street);
-        if (p.city) parts.push(p.city);
-        if (p.state) parts.push(p.state);
-        if (p.country) parts.push(p.country);
-        if (p.postcode) parts.push(p.postcode);
-        const subtitle = parts.filter(Boolean).join(", ");
-        const title = p.name || subtitle || `${p.type || "Location"}`;
-        return {
-          id: `${p.osm_type || ""}_${
-            p.osm_id || Math.random().toString(36).slice(2)
-          }`,
-          title,
-          subtitle,
-          lon: g?.coordinates?.[0],
-          lat: g?.coordinates?.[1],
-        };
-      });
-
-      const results =
-        mapped.length > 0
-          ? mapped
-          : mockLocations.filter(
-              (m) =>
-                m.title.toLowerCase().includes(query.toLowerCase()) ||
-                m.subtitle.toLowerCase().includes(query.toLowerCase())
-            );
-
-      if (type === "pickup") {
-        setPickupSuggestions(results);
-        setShowPickupSuggestions(true);
-      } else {
-        setDropoffSuggestions(results);
-        setShowDropoffSuggestions(true);
-      }
-    } catch (e) {
-      // Fallback to simple mock filtering on error
-      const filtered = mockLocations.filter(
-        (location) =>
-          location.title.toLowerCase().includes(query.toLowerCase()) ||
-          location.subtitle.toLowerCase().includes(query.toLowerCase())
-      );
-
-      if (type === "pickup") {
-        setPickupSuggestions(filtered);
-        setShowPickupSuggestions(true);
-      } else {
-        setDropoffSuggestions(filtered);
-        setShowDropoffSuggestions(true);
-      }
     }
   };
 

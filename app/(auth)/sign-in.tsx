@@ -106,7 +106,8 @@ export default function SignInScreen() {
         });
         setIsLoading(false);
         if (resp.success) {
-          await setUser(resp.data);
+				 console.log("auth_response:__: ",resp.data);
+				 await setUser(resp.data);
           Alert.alert("Success", "Signed in successfully!", [
             {
               text: "OK",

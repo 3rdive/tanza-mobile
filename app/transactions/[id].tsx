@@ -1,6 +1,4 @@
-import ProgressTracker, {
-  TrackingStatus,
-} from "@/components/transaction/order-tracking";
+import ProgressTracker from "@/components/transaction/order-tracking";
 import {
   transactionService,
   userService,
@@ -24,50 +22,28 @@ import { RFValue } from "react-native-responsive-fontsize";
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
-const baseOrderId = "42097296-527f-4900-b312-3573de899699";
-
-const trackingData = [
-  {
-    id: "1",
-    status: TrackingStatus.PENDING,
-    note: "Order created",
-    createdAt: "2025-09-13T21:00:00.000Z",
-    updatedAt: "2025-09-13T21:00:00.000Z",
-    orderId: baseOrderId,
-  },
-  {
-    id: "2",
-    status: TrackingStatus.ACCEPTED,
-    note: "Order accepted by rider",
-    createdAt: "2025-09-13T21:10:00.000Z",
-    updatedAt: "2025-09-13T21:10:00.000Z",
-    orderId: baseOrderId,
-  },
-  {
-    id: "3",
-    status: TrackingStatus.PICKED_UP,
-    note: "Rider picked up the order",
-    createdAt: "2025-09-13T21:33:28.139Z",
-    updatedAt: "2025-09-13T21:33:28.139Z",
-    orderId: baseOrderId,
-  },
-  {
-    id: "4",
-    status: TrackingStatus.TRANSIT,
-    note: "Order is on the way",
-    createdAt: "2025-09-13T21:50:00.000Z",
-    updatedAt: "2025-09-13T21:50:00.000Z",
-    orderId: baseOrderId,
-  },
-  {
-    id: "5",
-    status: TrackingStatus.DELIVERED,
-    note: "Order delivered successfully",
-    createdAt: "2025-09-13T22:10:00.000Z",
-    updatedAt: "2025-09-13T22:10:00.000Z",
-    orderId: baseOrderId,
-  },
-];
+const getStatusColor = (status: string): string => {
+  const s = String(status || "").toLowerCase();
+  switch (s) {
+    case "completed":
+    case "delivered":
+      return "#22c55e";
+    case "refunded":
+      return "#06b6d4";
+    case "in_transit":
+    case "transit":
+    case "picked_up":
+      return "#f59e0b";
+    case "pending":
+      return "#6b7280";
+    case "accepted":
+      return "#3b82f6";
+    case "failed":
+      return "#ef4444";
+    default:
+      return "#6b7280";
+  }
+};
 
 export default function TransactionDetail(): JSX.Element {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -96,10 +72,10 @@ export default function TransactionDetail(): JSX.Element {
               const u = await userService.getProfile();
               if (!mounted) return;
               if (u?.success && u.data) setProfile(u.data);
-            } catch (_e) {}
+            } catch {}
           }
         }
-      } catch (_e) {
+      } catch {
         if (mounted) setNotFound(true);
       } finally {
         if (mounted) setLoading(false);
@@ -216,11 +192,35 @@ export default function TransactionDetail(): JSX.Element {
               {amountNum >= 0 ? "+" : ""}₦
               {Math.abs(amountNum || 0).toLocaleString()}
             </Text>
-            <View style={[styles.statusBadge, { backgroundColor: "#00B624" }]}>
-              <Text style={styles.statusText}>
-                {String(`${apiTx.status}d`).replace(/_/g, " ")}
-              </Text>
-            </View>
+            {(() => {
+              const tracking = (apiTx?.order as any)?.orderTracking as
+                | { status: string; createdAt: string }[]
+                | undefined;
+              let derived = "";
+              if (tracking && tracking.length > 0) {
+                // Use the most recent tracking status by createdAt
+                const last = tracking.reduce((a, b) =>
+                  new Date(a.createdAt) > new Date(b.createdAt) ? a : b
+                );
+                derived = String(last.status);
+              } else if ((apiTx as any)?.order?.orderStatus) {
+                derived = String((apiTx as any).order.orderStatus);
+              } else if (apiTx.status) {
+                derived = String(apiTx.status);
+              }
+              return (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(derived) },
+                  ]}
+                >
+                  <Text style={styles.statusText}>
+                    {derived.replace(/_/g, " ")}
+                  </Text>
+                </View>
+              );
+            })()}
           </View>
         </View>
 
@@ -263,11 +263,19 @@ export default function TransactionDetail(): JSX.Element {
             <Text style={styles.sectionTitle}>Package & Contact Details</Text>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Pickup</Text>
-              <Text style={styles.detailValue}>{order.pickUpLocation}</Text>
+              <Text style={styles.detailValue}>
+                {(order as any)?.pickUpLocation?.address ||
+                  (order as any)?.pickUpLocation ||
+                  ""}
+              </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Drop-off</Text>
-              <Text style={styles.detailValue}>{order.dropOffLocation}</Text>
+              <Text style={styles.detailValue}>
+                {(order as any)?.dropOffLocation?.address ||
+                  (order as any)?.dropOffLocation ||
+                  ""}
+              </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Vehicle</Text>

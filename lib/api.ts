@@ -1,24 +1,38 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
-export const BASE_URL = "https://8e458399612b.ngrok-free.app";
-export const AXIOS: AxiosInstance = axios.create({ baseURL: BASE_URL, timeout: 10000 });
+export const BASE_URL = "https://caaddaeb17b1.ngrok-free.app";
+export const AXIOS: AxiosInstance = axios.create({
+  baseURL: BASE_URL,
+  timeout: 10000,
+});
 
 // Interceptors: log requests and responses
-const isDev = typeof __DEV__ !== "undefined" ? __DEV__ : process.env.NODE_ENV !== "production";
+const isDev =
+  typeof __DEV__ !== "undefined"
+    ? __DEV__
+    : process.env.NODE_ENV !== "production";
 
 // Request interceptor
 AXIOS.interceptors.request.use(
   (config) => {
     // Ensure Authorization header is synced with the global axios default if not explicitly set
-    const globalAuth = (axios.defaults.headers.common || ({} as any))["Authorization"] as string | undefined;
+    const globalAuth = (axios.defaults.headers.common || ({} as any))[
+      "Authorization"
+    ] as string | undefined;
     const hasAuthOnConfig = !!(config.headers as any)?.Authorization;
     if (!hasAuthOnConfig && globalAuth) {
-      (config.headers as any) = { ...(config.headers as any), Authorization: globalAuth };
+      (config.headers as any) = {
+        ...(config.headers as any),
+        Authorization: globalAuth,
+      };
     }
 
     if (isDev) {
       const rawHeaders = config.headers as any;
-      const headers = typeof rawHeaders?.toJSON === "function" ? rawHeaders.toJSON() : rawHeaders;
+      const headers =
+        typeof rawHeaders?.toJSON === "function"
+          ? rawHeaders.toJSON()
+          : rawHeaders;
 
       // Redact sensitive headers
       const safeHeaders: Record<string, unknown> = { ...(headers || {}) };
@@ -52,7 +66,10 @@ AXIOS.interceptors.response.use(
   (response) => {
     if (isDev) {
       const rawHeaders = response.headers as any;
-      const headers = typeof rawHeaders?.toJSON === "function" ? rawHeaders.toJSON() : rawHeaders;
+      const headers =
+        typeof rawHeaders?.toJSON === "function"
+          ? rawHeaders.toJSON()
+          : rawHeaders;
 
       console.log("[Axios Response]", {
         method: response.config?.method,
@@ -85,8 +102,6 @@ AXIOS.interceptors.response.use(
   }
 );
 
-
-
 // Types
 export type Role = "user" | "admin" | string;
 
@@ -101,13 +116,13 @@ export interface IUser {
   firstName: string;
   lastName: string;
   role: Role;
-	email: string;
-	mobile: string;
+  email: string;
+  mobile: string;
   profilePic: string | null;
   countryCode: string;
   registrationDate: Date | string;
   updatedAt: Date | string;
-  registrationMode: 'google' | 'apple' | 'manual';
+  registrationMode: "google" | "apple" | "manual";
   usersAddress?: IUsersAddress | null;
 }
 
@@ -156,38 +171,61 @@ export interface IResetPasswordPayload {
 
 export const authService = {
   login: async (payload: ILoginPayload) => {
-    const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>("/api/v1/auth/login", payload);
+    const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>(
+      "/api/v1/auth/login",
+      payload
+    );
     return data;
   },
   signUp: async (payload: ISignUpPayload) => {
-    const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>("/api/v1/auth/sign-up", payload);
+    const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>(
+      "/api/v1/auth/sign-up",
+      payload
+    );
     return data;
   },
   sendOtp: async (payload: IOtpPayload) => {
-    const { data } = await AXIOS.post<IApiResponse<string>>("/api/v1/otp", payload);
+    const { data } = await AXIOS.post<IApiResponse<string>>(
+      "/api/v1/otp",
+      payload
+    );
     return data;
   },
   consumeOtp: async (payload: IOtpConsumePayload) => {
-    const { data } = await AXIOS.post<IApiResponse<{ message: string }>>("/api/v1/otp/consume", payload);
+    const { data } = await AXIOS.post<IApiResponse<{ message: string }>>(
+      "/api/v1/otp/consume",
+      payload
+    );
     return data;
   },
   resetPassword: async (payload: IResetPasswordPayload) => {
-    const { data } = await AXIOS.post<IApiResponse<string>>("/api/v1/auth/reset-password", payload);
+    const { data } = await AXIOS.post<IApiResponse<string>>(
+      "/api/v1/auth/reset-password",
+      payload
+    );
     return data;
   },
   // New: unified existence check by email or mobile
   checkExisting: async (emailOrMobile: string) => {
-    const { data } = await AXIOS.get<IApiResponse<{ exists: boolean; registrationMode?: string }>>("/api/v1/auth/check-existing", { params: { emailOrMobile } });
+    const { data } = await AXIOS.get<
+      IApiResponse<{ exists: boolean; registrationMode?: string }>
+    >("/api/v1/auth/check-existing", { params: { emailOrMobile } });
     return data;
   },
   userExistsByMobile: async (mobile: string) => {
-    const { data } = await AXIOS.get<IApiResponse<any>>("/api/v1/user/exists/mobile", { params: { mobile } });
+    const { data } = await AXIOS.get<IApiResponse<any>>(
+      "/api/v1/user/exists/mobile",
+      { params: { mobile } }
+    );
     // Support either {data: {exists:boolean}} or {data:boolean}
     const exists = (data as any)?.data?.exists ?? (data as any)?.data ?? false;
     return Boolean(exists);
   },
   userExistsByEmail: async (email: string) => {
-    const { data } = await AXIOS.get<IApiResponse<any>>("/api/v1/user/exists/email", { params: { email } });
+    const { data } = await AXIOS.get<IApiResponse<any>>(
+      "/api/v1/user/exists/email",
+      { params: { email } }
+    );
     const exists = (data as any)?.data?.exists ?? (data as any)?.data ?? false;
     return Boolean(exists);
   },
@@ -201,7 +239,7 @@ export interface IWallet {
   walletBalance: number;
   createdAt: string;
   isFrozen: boolean;
- customerCode: string;
+  customerCode: string;
 }
 
 export type TransactionType = "DEPOSIT" | "WITHDRAWAL" | "TRANSFER" | string;
@@ -213,6 +251,8 @@ export interface ITransaction {
   orderId: string | null;
   description: string;
   status: string;
+  // present for ORDER transactions in history list
+  orderStatus?: string;
 }
 
 export interface IPaginated<T> {
@@ -237,13 +277,18 @@ export const walletService = {
     return data;
   },
   getVirtualAccount: async () => {
-    const { data } = await AXIOS.get<IApiResponse<IVirtualAccount>>("/api/v1/wallet/virtual-account");
+    const { data } = await AXIOS.get<IApiResponse<IVirtualAccount>>(
+      "/api/v1/wallet/virtual-account"
+    );
     return data;
   },
- fund: async (payload: IFundWallet) => {
-	const { data } = await AXIOS.post<IApiResponse<string>>("/api/v1/wallet/fund",payload);
-	return data;
- },
+  fund: async (payload: IFundWallet) => {
+    const { data } = await AXIOS.post<IApiResponse<string>>(
+      "/api/v1/wallet/fund",
+      payload
+    );
+    return data;
+  },
 } as const;
 
 // User Profile & Password
@@ -262,24 +307,31 @@ export interface IUpdatePasswordPayload {
   newPassword: string;
 }
 
-
 export interface IFundWallet {
-	customerCode: string;
-	transactionReference: string;
+  customerCode: string;
+  transactionReference: string;
 }
 export const userService = {
   updateProfile: async (payload: IUpdateProfilePayload) => {
-    const { data } = await AXIOS.put<IApiResponse<IUser>>("/api/v1/user/profile", payload);
+    const { data } = await AXIOS.put<IApiResponse<IUser>>(
+      "/api/v1/user/profile",
+      payload
+    );
     return data;
   },
   updatePassword: async (payload: IUpdatePasswordPayload) => {
-    const { data } = await AXIOS.put<IApiResponse<string>>("/api/v1/user/password/update", payload);
+    const { data } = await AXIOS.put<IApiResponse<string>>(
+      "/api/v1/user/password/update",
+      payload
+    );
     return data;
   },
- getProfile: async () => {
-	const { data } = await AXIOS.get<IApiResponse<IUser>>("/api/v1/user/profile");
-	return data;
- }
+  getProfile: async () => {
+    const { data } = await AXIOS.get<IApiResponse<IUser>>(
+      "/api/v1/user/profile"
+    );
+    return data;
+  },
 } as const;
 
 export interface IOrderTracking {
@@ -291,12 +343,19 @@ export interface IOrderTracking {
   orderId: string;
 }
 
+// Updated: pickUpLocation is now an object
+export interface IOrderLocation {
+  address: string;
+  latitude: string;
+  longitude: string;
+}
+
 export interface IOrderData {
   id: string;
   sender: any;
   recipient: any;
-  pickUpLocation: string;
-  dropOffLocation: string;
+  pickUpLocation: IOrderLocation; // updated from string to object
+  dropOffLocation: IOrderLocation; // updated from string to object
   userOrderRole: string;
   vehicleType: string;
   noteForRider: string | null;
@@ -326,15 +385,20 @@ export interface ITransactionDetail {
 }
 
 export const transactionService = {
-  getRecent: async (params: { limit: number; page: number; transactionType?: "ORDER" | "DEPOSIT" | string }) => {
-    const { data } = await AXIOS.get<IApiResponse<ITransaction[]> & { pagination: IPaginated<ITransaction> }>(
-      "/api/v1/transaction",
-      { params }
-    );
+  getRecent: async (params: {
+    limit: number;
+    page: number;
+    transactionType?: "ORDER" | "DEPOSIT" | string;
+  }) => {
+    const { data } = await AXIOS.get<
+      IApiResponse<ITransaction[]> & { pagination: IPaginated<ITransaction> }
+    >("/api/v1/transaction", { params });
     return data;
   },
   getById: async (id: string) => {
-    const { data } = await AXIOS.get<IApiResponse<ITransactionDetail | null>>(`/api/v1/transaction/${id}`);
+    const { data } = await AXIOS.get<IApiResponse<ITransactionDetail | null>>(
+      `/api/v1/transaction/${id}`
+    );
     return data;
   },
 } as const;
@@ -385,14 +449,27 @@ export interface ICreateOrderPayload {
 
 export const orderService = {
   calculateCharge: async (params: ICalculateChargeParams) => {
-    const { data } = await AXIOS.get<IApiResponse<ICalculateChargeData>>("/api/v1/order/calculate-charge", { params });
+    const { data } = await AXIOS.get<IApiResponse<ICalculateChargeData>>(
+      "/api/v1/order/calculate-charge",
+      { params }
+    );
     return data;
   },
   create: async (
-    query: { startLat: number; startLon: number; endLat: number; endLon: number; vehicleType: string },
+    query: {
+      startLat: number;
+      startLon: number;
+      endLat: number;
+      endLon: number;
+      vehicleType: string;
+    },
     payload: ICreateOrderPayload
   ) => {
-    const { data } = await AXIOS.post<IApiResponse<IOrderData>>("/api/v1/order", payload, { params: query });
+    const { data } = await AXIOS.post<IApiResponse<IOrderData>>(
+      "/api/v1/order",
+      payload,
+      { params: query }
+    );
     return data;
   },
 } as const;
@@ -428,11 +505,17 @@ export interface ILocationFeature {
 
 export const locationService = {
   search: async (q: string) => {
-    const { data } = await AXIOS.get<IApiResponse<ILocationFeature[]>>("/api/v1/location/search", { params: { q } });
+    const { data } = await AXIOS.get<IApiResponse<ILocationFeature[]>>(
+      "/api/v1/location/search",
+      { params: { q } }
+    );
     return data;
   },
   reverse: async (lat: number, lon: number) => {
-    const { data } = await AXIOS.get<IApiResponse<any>>("/api/v1/location/reverse", { params: { lat, lon } });
+    const { data } = await AXIOS.get<IApiResponse<any>>(
+      "/api/v1/location/reverse",
+      { params: { lat, lon } }
+    );
     return data;
   },
 } as const;
@@ -446,9 +529,13 @@ export interface IRateRiderPayload {
 
 export const ratingsService = {
   rate: async (payload: IRateRiderPayload) => {
-    const { data } = await AXIOS.post<IApiResponse<{ message: string }>>("/api/v1/ratings/rate", payload, {
-      headers: { "Content-Type": "application/json" },
-    });
+    const { data } = await AXIOS.post<IApiResponse<{ message: string }>>(
+      "/api/v1/ratings/rate",
+      payload,
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
     return data;
   },
 } as const;
@@ -456,7 +543,8 @@ export const ratingsService = {
 export const storageService = {
   upload: async (file: { uri: string; name?: string; type?: string }) => {
     const form = new FormData();
-    const filename = file.name || (file.uri.split("/").pop() || `upload-${Date.now()}.jpg`);
+    const filename =
+      file.name || file.uri.split("/").pop() || `upload-${Date.now()}.jpg`;
     const mimetype = file.type || "image/jpeg";
     form.append("file", {
       // @ts-ignore React Native FormData file
@@ -465,11 +553,16 @@ export const storageService = {
       type: mimetype,
     } as any);
 
-    const { data } = await AXIOS.post<IApiResponse<{ filename: string; mimetype: string; size: number; url: string }>>(
-      "/api/v1/storage-media/upload",
-      form,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    const { data } = await AXIOS.post<
+      IApiResponse<{
+        filename: string;
+        mimetype: string;
+        size: number;
+        url: string;
+      }>
+    >("/api/v1/storage-media/upload", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return data;
   },
 } as const;

@@ -2,8 +2,9 @@
 import { transactionService, userService, walletService } from "@/lib/api";
 import { StorageKeys, StorageMechanics } from "@/lib/storage-mechanics";
 import { useUser, useWallet } from "@/redux/hooks/hooks";
+import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -15,7 +16,6 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { Image } from "expo-image";
 const UI_SCALE = 0.82; // globally downscale sizes ~18%
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (isInitial: boolean = false) => {
+  const load = async (isInitial: boolean = false) => {
     if (isInitial) {
       setIsLoading(true);
       setTransactionsLoading(true);
@@ -55,10 +55,11 @@ export default function HomeScreen() {
         const apiTx = (txResp as any).data || [];
         const mapped = apiTx.map((t: any) => {
           // Map API type to local icon type and amount sign stays as-is for now
+          const upperType = String(t.type).toUpperCase();
           const iconType =
-            t.type === "DEPOSIT"
+            upperType === "DEPOSIT"
               ? "fund"
-              : t.type === "WITHDRAWAL"
+              : upperType === "WITHDRAWAL" || upperType === "ORDER"
               ? "send"
               : "receive";
           const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Package Sent";
@@ -66,6 +67,11 @@ export default function HomeScreen() {
           const dateStr = !isNaN(created.getTime())
             ? created.toLocaleDateString()
             : t.createdAt;
+          // Prefer orderStatus for ORDER types
+          const status =
+            String(t.type).toUpperCase() === "ORDER" && t.orderStatus
+              ? String(t.orderStatus)
+              : String(t.status);
           return {
             id: t.id,
             type: iconType,
@@ -73,7 +79,7 @@ export default function HomeScreen() {
             subtitle: (t.description || "").toString(),
             amount: Number(t.amount) || 0,
             date: dateStr,
-            status: t.status,
+            status,
           };
         });
         setTransactions(mapped);
@@ -90,7 +96,7 @@ export default function HomeScreen() {
         setTransactionsLoading(false);
       }
     }
-  }, []);
+  };
 
   useEffect(() => {
     userService
@@ -110,7 +116,7 @@ export default function HomeScreen() {
     );
 
     load(true);
-  }, [load]);
+  }, []);
 
   const getTransactionIcon = (type: any) => {
     switch (type) {
@@ -122,6 +128,27 @@ export default function HomeScreen() {
         return "💰";
       default:
         return "💳";
+    }
+  };
+
+  const getStatusColor = (status: string): string => {
+    const s = String(status).toLowerCase();
+    switch (s) {
+      case "completed":
+      case "delivered":
+        return "#22c55e";
+      case "refunded":
+        return "#06b6d4";
+      case "in_transit":
+        return "#f59e0b";
+      case "pending":
+        return "#6b7280";
+      case "accepted":
+        return "#3b82f6";
+      case "failed":
+        return "#ef4444";
+      default:
+        return "#6b7280";
     }
   };
 
@@ -142,9 +169,23 @@ export default function HomeScreen() {
           <Text style={styles.transactionSubtitle} allowFontScaling={false}>
             {transaction.subtitle}
           </Text>
-          <Text style={styles.transactionDate} allowFontScaling={false}>
-            {transaction.date}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Text style={styles.transactionDate} allowFontScaling={false}>
+              {transaction.date}
+            </Text>
+            {transaction.status ? (
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(transaction.status) },
+                ]}
+              >
+                <Text style={styles.statusText} allowFontScaling={false}>
+                  {String(transaction.status).replace(/_/g, " ")}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </View>
         <Text
           style={[
@@ -175,9 +216,9 @@ export default function HomeScreen() {
     );
   }
 
- const formattedBalance = new Intl.NumberFormat('en-US').format(balance ?? 0);
+  const formattedBalance = new Intl.NumberFormat("en-US").format(balance ?? 0);
 
- return (
+  return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         style={styles.content}
@@ -614,6 +655,18 @@ const styles = StyleSheet.create({
   transactionAmount: {
     fontSize: rs(16),
     fontWeight: "600",
+  },
+  statusBadge: {
+    paddingHorizontal: rs(6),
+    paddingVertical: rs(2),
+    borderRadius: rs(10),
+    marginLeft: rs(8),
+  },
+  statusText: {
+    fontSize: rs(10),
+    color: "#fff",
+    fontWeight: "600",
+    textTransform: "capitalize",
   },
   positiveAmount: {
     color: "#22c55e",

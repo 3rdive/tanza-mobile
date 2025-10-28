@@ -1,6 +1,7 @@
+import { transactionService } from "@/lib/api";
 import { tzColors } from "@/theme/color";
 import { router } from "expo-router";
-import { JSX, useCallback, useEffect, useMemo, useState } from "react";
+import { JSX, useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +13,6 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { transactionService } from "@/lib/api";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue(n * UI_SCALE);
@@ -20,7 +20,14 @@ const PAGE_SIZE = 10;
 
 type TransactionType = "send" | "receive" | "fund";
 
-type TransactionStatus = "completed" | "failed" | "refunded" | "in_transit" | "pending";
+type TransactionStatus =
+  | "completed"
+  | "failed"
+  | "refunded"
+  | "in_transit"
+  | "pending"
+  | "accepted"
+  | "delivered";
 
 type Transaction = {
   id: string;
@@ -53,14 +60,25 @@ export default function TransactionHistoryScreen(): JSX.Element {
       const iconType: TransactionType = t.type === "DEPOSIT" ? "fund" : "send"; // ORDER→send (outgoing), DEPOSIT→fund
       const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Order";
       const created = new Date(t.createdAt);
-      const dateStr = !isNaN(created.getTime()) ? created.toISOString() : t.createdAt;
-      // Map status: API: complete, failed, refunded → UI: completed, failed, refunded
-      const statusMap: Record<string, TransactionStatus> = {
-        complete: "completed",
-        failed: "failed",
-        refunded: "refunded",
-      } as const;
-      const status = (statusMap[(t.status || "").toLowerCase()] || "completed") as TransactionStatus;
+      const dateStr = !isNaN(created.getTime())
+        ? created.toISOString()
+        : t.createdAt;
+      // If ORDER, prefer orderStatus from API (e.g., pending, accepted, delivered)
+      let status: TransactionStatus;
+      if ((t.type || "").toUpperCase() === "ORDER" && t.orderStatus) {
+        const os = String(t.orderStatus).toLowerCase();
+        const allowed = ["pending", "accepted", "delivered", "in_transit"];
+        status = (allowed.includes(os) ? os : "pending") as TransactionStatus;
+      } else {
+        // Map non-order statuses: complete, failed, refunded → completed, failed, refunded
+        const statusMap: Record<string, TransactionStatus> = {
+          complete: "completed",
+          failed: "failed",
+          refunded: "refunded",
+        } as const;
+        status = (statusMap[(t.status || "").toLowerCase()] ||
+          "completed") as TransactionStatus;
+      }
       return {
         id: t.id,
         type: iconType,
@@ -73,20 +91,26 @@ export default function TransactionHistoryScreen(): JSX.Element {
     });
   }, []);
 
-  const fetchPage = useCallback(async (pageToLoad: number, append: boolean) => {
-    try {
-      const params: any = { limit: PAGE_SIZE, page: pageToLoad };
-      if (filter !== "all") params.transactionType = filter;
-      const resp = await transactionService.getRecent(params);
-      const apiItems = (resp as any)?.data || [];
-      const mapped = mapApiToUI(apiItems);
-      setHasMore(((resp as any)?.pagination?.page || pageToLoad) < ((resp as any)?.pagination?.totalPages || 0));
-      setPage(pageToLoad);
-      setTransactions((prev) => (append ? [...prev, ...mapped] : mapped));
-    } catch (e) {
-      console.warn("Failed to load transactions", e);
-    }
-  }, [filter, mapApiToUI]);
+  const fetchPage = useCallback(
+    async (pageToLoad: number, append: boolean) => {
+      try {
+        const params: any = { limit: PAGE_SIZE, page: pageToLoad };
+        if (filter !== "all") params.transactionType = filter;
+        const resp = await transactionService.getRecent(params);
+        const apiItems = (resp as any)?.data || [];
+        const mapped = mapApiToUI(apiItems);
+        setHasMore(
+          ((resp as any)?.pagination?.page || pageToLoad) <
+            ((resp as any)?.pagination?.totalPages || 0)
+        );
+        setPage(pageToLoad);
+        setTransactions((prev) => (append ? [...prev, ...mapped] : mapped));
+      } catch (e) {
+        console.warn("Failed to load transactions", e);
+      }
+    },
+    [filter, mapApiToUI]
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -128,12 +152,16 @@ export default function TransactionHistoryScreen(): JSX.Element {
     switch (status) {
       case "completed":
         return "#22c55e";
+      case "delivered":
+        return "#22c55e";
       case "refunded":
         return "#06b6d4";
       case "in_transit":
         return "#f59e0b";
       case "pending":
         return "#6b7280";
+      case "accepted":
+        return "#3b82f6";
       case "failed":
         return "#ef4444";
       default:
