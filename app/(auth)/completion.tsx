@@ -1,18 +1,30 @@
 // CompleteInfoScreen.tsx
 import { useDeviceLocation } from "@/hooks/location.hook";
-import { authService, locationService, ILocationFeature, storageService } from "@/lib/api";
+import {
+  authService,
+  ILocationFeature,
+  locationService,
+  storageService,
+} from "@/lib/api";
 import { rs } from "@/lib/functions";
-import { useAuthFlow, useUser } from "@/redux/hooks/hooks";
+import {
+  useAppDispatch,
+  useAppSelector,
+  useAuthFlow,
+  useUser,
+} from "@/redux/hooks/hooks";
+import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
-import { useIsFocused } from "@react-navigation/native";
-import { useAppSelector, useAppDispatch } from "@/redux/hooks/hooks";
-import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import {
   ActivityIndicator,
-  Alert, KeyboardAvoidingView, Platform, Pressable,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -21,10 +33,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
 
 //TODO: align email in complete.tsx, add userAddress to profileEdit, prefill pickup or dropOff location with users address
-
 
 export default function CompleteInfoScreen() {
   const { email, mobile, otp } = useAuthFlow();
@@ -34,20 +44,39 @@ export default function CompleteInfoScreen() {
   const { setUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [addressText, setAddressText] = useState("");
-  const [addressCoords, setAddressCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [addrSuggestions, setAddrSuggestions] = useState<{ id: string; title: string; subtitle: string; lat?: number; lon?: number }[]>([]);
+  const [addressCoords, setAddressCoords] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(null);
+  const [addrSuggestions, setAddrSuggestions] = useState<
+    {
+      id: string;
+      title: string;
+      subtitle: string;
+      lat?: number;
+      lon?: number;
+    }[]
+  >([]);
   const [showAddrSuggestions, setShowAddrSuggestions] = useState(false);
-	const { latitude, longitude, locationAddress  } = useDeviceLocation()
+  const { latitude, longitude, locationAddress } = useDeviceLocation();
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
-  const selected = useAppSelector((s) => (s as any).locationSearch?.selected || null);
+  const selected = useAppSelector(
+    (s) => (s as any).locationSearch?.selected || null
+  );
 
   console.log("otp", otp);
-  
+
   const hasTwoWords = (s: string) => s.trim().split(/\s+/).length >= 2;
 
   const isFormValid = () => {
-    return hasTwoWords(fullName) && password.length >= 8 && !!addressText && !!addressCoords && !!profilePic;
+    return (
+      hasTwoWords(fullName) &&
+      password.length >= 8 &&
+      !!addressText &&
+      !!addressCoords &&
+      !!profilePic
+    );
   };
 
   const handleComplete = async () => {
@@ -117,7 +146,9 @@ export default function CompleteInfoScreen() {
         const subtitle = parts.filter(Boolean).join(", ");
         const title = p.name || subtitle || `${p.type || "Location"}`;
         return {
-          id: `${p.osm_type || ""}_${p.osm_id || Math.random().toString(36).slice(2)}`,
+          id: `${p.osm_type || ""}_${
+            p.osm_id || Math.random().toString(36).slice(2)
+          }`,
           title,
           subtitle,
           lon: g?.coordinates?.[0],
@@ -132,8 +163,13 @@ export default function CompleteInfoScreen() {
     }
   };
 
-  const selectAddress = (s: { title: string; subtitle: string; lat?: number; lon?: number }) => {
-    const text = s.title || s.subtitle;
+  const selectAddress = (s: {
+    title: string;
+    subtitle: string;
+    lat?: number;
+    lon?: number;
+  }) => {
+    const text = s.title || s.subtitle || "";
     setAddressText(text);
     setAddressCoords(s.lat && s.lon ? { lat: s.lat, lon: s.lon } : null);
     setShowAddrSuggestions(false);
@@ -141,36 +177,20 @@ export default function CompleteInfoScreen() {
 
   const useCurrentLocation = async () => {
     try {
-
-		 if(!longitude || !latitude) {
-			 Alert.alert("Location Error", "Unable to fetch current location");
-			 return;
-		 }
+      if (!longitude || !latitude) {
+        Alert.alert("Location Error", "Unable to fetch current location");
+        return;
+      }
       const lat = latitude as any;
       const lon = longitude as any;
-      // const rev = await locationService.reverse(lat, lon);
-      // const name = rev?.data?.data?.name || rev?.data?.data?.display_name || "Current Location";
       setAddressText(locationAddress);
       setAddressCoords({ lat, lon });
       setShowAddrSuggestions(false);
-
-		// 	const getPosition = () => new Promise<GeolocationPosition>((resolve, reject) => {
-		 //         if (!navigator?.geolocation) {
-		 //           reject(new Error("Geolocation not available"));
-		 //           return;
-		 //         }
-		 //         navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-		 //       });
-		 //       const pos = await getPosition();
-		 //       const lat = pos.coords.latitude;
-		 //       const lon = pos.coords.longitude;
-		 //       const rev = await locationService.reverse(lat, lon);
-		 //       const name = rev?.data?.data?.name || rev?.data?.data?.display_name || "Current Location";
-		 //       setAddressText(name);
-		 //       setAddressCoords({ lat, lon });
-		 //       setShowAddrSuggestions(false);
     } catch (e: any) {
-      Alert.alert("Location Error", e?.message || "Unable to fetch current location");
+      Alert.alert(
+        "Location Error",
+        e?.message || "Unable to fetch current location"
+      );
     }
   };
 
@@ -187,7 +207,10 @@ export default function CompleteInfoScreen() {
   // Apply selected address from full-screen search when we return focused
   useEffect(() => {
     if (!isFocused) return;
-    if (selected && (selected.context === "usersAddress" || !selected.context)) {
+    if (
+      selected &&
+      (selected.context === "usersAddress" || !selected.context)
+    ) {
       const text = selected.title || selected.subtitle || "";
       setAddressText(text);
       if (selected.lat && selected.lon) {
@@ -202,9 +225,11 @@ export default function CompleteInfoScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-		 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}></KeyboardAvoidingView>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      ></KeyboardAvoidingView>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-<Text style={styles.title}>Complete your profile</Text>
+        <Text style={styles.title}>Complete your profile</Text>
         <Text style={styles.subtitle}>
           Let us know how to properly address you and secure your account
           &middot;{" "}
@@ -212,74 +237,102 @@ export default function CompleteInfoScreen() {
             style={{
               color: "blue",
             }}
-						onPress={() => router.back()}
+            onPress={() => router.back()}
           >
             {email}
           </Text>
         </Text>
-			 {/* Profile picture avatar + upload */}
-			 <View style={styles.inputContainer}>
-				<Text style={styles.label}>Profile Photo</Text>
-				<View style={styles.avatarRow}>
-				 <View style={styles.avatarWrapper}>
-					{profilePic ? (
-						<Image source={{ uri: profilePic }} style={styles.avatar} contentFit="cover" />
-					) : (
-						<View style={[styles.avatar, styles.avatarPlaceholder]}>
- 						<Text style={styles.avatarPlaceholderText}>
-							{(fullName.trim().split(/\s+/)[0]?.[0]?.toUpperCase() || "P")}
-							{(fullName.trim().split(/\s+/)[1]?.[0]?.toUpperCase() || "")}
-						 </Text>
-						</View>
-					)}
-				 </View>
-				 <TouchableOpacity style={styles.selectPhotoBtn} onPress={async () => {
-					try {
-					 const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-					 if (perm.status !== "granted") {
-						Alert.alert("Permission needed", "We need access to your photos to select a profile picture.");
-						return;
-					 }
-					 const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1,1], quality: 0.8 });
-					 if (result.canceled) return;
-					 const uri = result.assets?.[0]?.uri;
-					 if (!uri) return;
-					 // Optimistic: show local image while uploading
-					 // We'll upload and replace with the server URL when done
-					 let uploadingAlertShown = false;
-					 const timer = setTimeout(() => {
-						uploadingAlertShown = true;
-					 }, 400);
-					 const resp = await storageService.upload({ uri, type: "image/jpeg" });
-					 clearTimeout(timer);
-					 if (resp?.success) {
-						const url = (resp.data as any)?.url;
-						if (url) setProfilePic(url);
-					 } else {
-						Alert.alert("Upload failed", resp?.message || "Unable to upload image");
-					 }
-					} catch (e: any) {
-					 Alert.alert("Upload Error", e?.response?.data?.message || e?.message || "Unable to upload image");
-					}
-				 }}>
-					<Text style={styles.selectPhotoBtnText}>Select Photo</Text>
-				 </TouchableOpacity>
-				</View>
-				{/*<Text style={styles.helperText}>Image will be uploaded and linked to your account.</Text>*/}
-			 </View>
+        {/* Profile picture avatar + upload */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Profile Photo</Text>
+          <View style={styles.avatarRow}>
+            <View style={styles.avatarWrapper}>
+              {profilePic ? (
+                <Image
+                  source={{ uri: profilePic }}
+                  style={styles.avatar}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <Text style={styles.avatarPlaceholderText}>
+                    {fullName.trim().split(/\s+/)[0]?.[0]?.toUpperCase() || "P"}
+                    {fullName.trim().split(/\s+/)[1]?.[0]?.toUpperCase() || ""}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.selectPhotoBtn}
+              onPress={async () => {
+                try {
+                  const perm =
+                    await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (perm.status !== "granted") {
+                    Alert.alert(
+                      "Permission needed",
+                      "We need access to your photos to select a profile picture."
+                    );
+                    return;
+                  }
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.8,
+                  });
+                  if (result.canceled) return;
+                  const uri = result.assets?.[0]?.uri;
+                  if (!uri) return;
+                  // Optimistic: show local image while uploading
+                  // We'll upload and replace with the server URL when done
+                  let uploadingAlertShown = false;
+                  const timer = setTimeout(() => {
+                    uploadingAlertShown = true;
+                  }, 400);
+                  const resp = await storageService.upload({
+                    uri,
+                    type: "image/jpeg",
+                  });
+                  clearTimeout(timer);
+                  if (resp?.success) {
+                    const url = (resp.data as any)?.url;
+                    if (url) setProfilePic(url);
+                  } else {
+                    Alert.alert(
+                      "Upload failed",
+                      resp?.message || "Unable to upload image"
+                    );
+                  }
+                } catch (e: any) {
+                  Alert.alert(
+                    "Upload Error",
+                    e?.response?.data?.message ||
+                      e?.message ||
+                      "Unable to upload image"
+                  );
+                }
+              }}
+            >
+              <Text style={styles.selectPhotoBtnText}>Select Photo</Text>
+            </TouchableOpacity>
+          </View>
+          {/*<Text style={styles.helperText}>Image will be uploaded and linked to your account.</Text>*/}
+        </View>
 
-
-			 	 <View style={styles.inputContainer}>
-        	  <Text style={styles.label}>Full name</Text>
-        	  <TextInput
-        	    style={styles.input}
-        	    placeholder="Enter your full name (first and last)"
-        	    value={fullName}
-        	    onChangeText={setFullName}
-        	    autoCapitalize="words"
-        	  />
-            <Text style={styles.helperText}>Enter at least first and last name</Text>
-        	</View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Full name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your full name (first and last)"
+            value={fullName}
+            onChangeText={setFullName}
+            autoCapitalize="words"
+          />
+          <Text style={styles.helperText}>
+            Enter at least first and last name
+          </Text>
+        </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Password</Text>
@@ -302,7 +355,12 @@ export default function CompleteInfoScreen() {
               style={styles.input}
               placeholder="Search address (e.g., Victoria Island)"
               value={addressText}
-              onFocus={() => router.push({ pathname: "/location-search", params: { context: "usersAddress" } })}
+              onFocus={() =>
+                router.push({
+                  pathname: "/location-search",
+                  params: { context: "usersAddress" },
+                })
+              }
               showSoftInputOnFocus={false}
               caretHidden
               autoCapitalize="sentences"
@@ -322,16 +380,25 @@ export default function CompleteInfoScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity onPress={useCurrentLocation} style={[styles.useLocationBtn]}>
+          <TouchableOpacity
+            onPress={useCurrentLocation}
+            style={[styles.useLocationBtn]}
+          >
             <Text style={styles.useLocationBtnText}>Use current location</Text>
           </TouchableOpacity>
 
           {showAddrSuggestions && addrSuggestions.length > 0 && (
             <View style={styles.suggestionBox}>
               {addrSuggestions.map((s) => (
-                <TouchableOpacity key={s.id} style={styles.suggestionItem} onPress={() => selectAddress(s)}>
+                <TouchableOpacity
+                  key={s.id}
+                  style={styles.suggestionItem}
+                  onPress={() => selectAddress(s)}
+                >
                   <Text style={styles.suggestionTitle}>{s.title}</Text>
-                  {!!s.subtitle && <Text style={styles.suggestionSubtitle}>{s.subtitle}</Text>}
+                  {!!s.subtitle && (
+                    <Text style={styles.suggestionSubtitle}>{s.subtitle}</Text>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>

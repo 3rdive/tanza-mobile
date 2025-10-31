@@ -1,7 +1,8 @@
-import { locationService, ILocationFeature } from "@/lib/api";
+import { ILocationFeature, locationService } from "@/lib/api";
+import { useAppDispatch } from "@/redux/hooks/hooks";
 import { setSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -11,14 +12,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useAppDispatch } from "@/redux/hooks/hooks";
 
 export default function LocationSearchScreen() {
   const { context } = useLocalSearchParams<{ context?: string }>();
   const dispatch = useAppDispatch();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<{ id: string; title: string; subtitle: string; lat?: number; lon?: number }[]>([]);
+  const [results, setResults] = useState<
+    {
+      id: string;
+      title: string;
+      subtitle: string;
+      lat?: number;
+      lon?: number;
+    }[]
+  >([]);
   const debounceRef = useRef<any>(null);
 
   const runSearch = useCallback(async (q: string) => {
@@ -42,7 +50,9 @@ export default function LocationSearchScreen() {
         const subtitle = parts.filter(Boolean).join(", ");
         const title = p.name || subtitle || `${p.type || "Location"}`;
         return {
-          id: `${p.osm_type || ""}_${p.osm_id || Math.random().toString(36).slice(2)}`,
+          id: `${p.osm_type || ""}_${
+            p.osm_id || Math.random().toString(36).slice(2)
+          }`,
           title,
           subtitle,
           lon: g?.coordinates?.[0],
@@ -63,15 +73,31 @@ export default function LocationSearchScreen() {
     return () => clearTimeout(debounceRef.current);
   }, [query]);
 
-  const handleSelect = (item: { title: string; subtitle: string; lat?: number; lon?: number }) => {
-    dispatch(setSelectedLocation({ title: item.title || item.subtitle, subtitle: item.subtitle, lat: item.lat, lon: item.lon, context: String(context || "") }));
+  const handleSelect = (item: {
+    title: string;
+    subtitle: string;
+    lat?: number;
+    lon?: number;
+  }) => {
+    dispatch(
+      setSelectedLocation({
+        title: item.title || item.subtitle,
+        subtitle: item.subtitle,
+        lat: item.lat,
+        lon: item.lon,
+        context: String(context || ""),
+      })
+    );
     router.back();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.cancelBtn}
+        >
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Search location</Text>
@@ -84,7 +110,7 @@ export default function LocationSearchScreen() {
           placeholder="Type an address, area or place"
           value={query}
           onChangeText={setQuery}
-					autoCorrect={false}
+          autoCorrect={false}
           autoFocus
         />
       </View>
@@ -97,18 +123,27 @@ export default function LocationSearchScreen() {
           </View>
         )}
         {!loading && results.length === 0 && query.trim().length < 2 && (
-          <Text style={styles.helper}>Start typing to search for a location</Text>
+          <Text style={styles.helper}>
+            Start typing to search for a location
+          </Text>
         )}
         {!loading && results.length === 0 && query.trim().length >= 2 && (
           <Text style={styles.helper}>No results. Try a different query.</Text>
         )}
 
-        {!loading && results.map((r) => (
-          <TouchableOpacity key={r.id} style={styles.item} onPress={() => handleSelect(r)}>
-            <Text style={styles.itemTitle}>{r.title}</Text>
-            {!!r.subtitle && <Text style={styles.itemSubtitle}>{r.subtitle}</Text>}
-          </TouchableOpacity>
-        ))}
+        {!loading &&
+          results.map((r, key) => (
+            <TouchableOpacity
+              key={key}
+              style={styles.item}
+              onPress={() => handleSelect(r)}
+            >
+              <Text style={styles.itemTitle}>{r.title}</Text>
+              {!!r.subtitle && (
+                <Text style={styles.itemSubtitle}>{r.subtitle}</Text>
+              )}
+            </TouchableOpacity>
+          ))}
       </View>
     </SafeAreaView>
   );
@@ -140,10 +175,20 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   results: { flex: 1, paddingHorizontal: 8 },
-  loadingRow: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12 },
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+  },
   loadingText: { color: "#666" },
   helper: { padding: 16, color: "#666" },
-  item: { paddingHorizontal: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  item: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
   itemTitle: { fontSize: 15, fontWeight: "600", color: "#000" },
   itemSubtitle: { fontSize: 13, color: "#666", marginTop: 2 },
 });

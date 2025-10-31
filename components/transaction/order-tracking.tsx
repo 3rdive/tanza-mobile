@@ -38,6 +38,8 @@ const statusColorMap: Record<TrackingStatus, string> = {
   [TrackingStatus.CANCELLED]: colors.cancelled, // red
 };
 
+// TODO: add tracking status
+
 const ProgressTracker: React.FC<Props> = ({ trackingData }) => {
   const latestStatus = trackingData[trackingData.length - 1]?.status;
   console.log({ latestStatus });

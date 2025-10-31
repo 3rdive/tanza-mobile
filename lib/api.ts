@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
-export const BASE_URL = "https://caaddaeb17b1.ngrok-free.app";
+export const BASE_URL = "https://f531b2fde2c8.ngrok-free.app";
 export const AXIOS: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
@@ -412,6 +412,7 @@ export interface ICalculateChargeParams {
   endLat: number;
   endLon: number;
   vehicleType: string; // e.g., bicycle | bike | van etc.
+  isUrgent: boolean;
 }
 
 export interface ICalculateChargeData {
@@ -462,6 +463,7 @@ export const orderService = {
       endLat: number;
       endLon: number;
       vehicleType: string;
+      isUrgent: boolean;
     },
     payload: ICreateOrderPayload
   ) => {

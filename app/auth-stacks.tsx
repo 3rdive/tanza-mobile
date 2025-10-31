@@ -18,7 +18,6 @@ export default function AuthStack({ children }: AuthStackProps) {
   const segments = useSegments();
   const router = useRouter();
   const rootNavigationState = useRootNavigationState();
- console.log("is_user_auth", user);
 
 
  useEffect(() => {
@@ -26,7 +25,6 @@ export default function AuthStack({ children }: AuthStackProps) {
     // Wait for the root navigation to be ready to avoid race conditions
 
 		console.log("rootNavigationState", rootNavigationState?.key);
-		console.log("is_user_auth", user);
     if (!rootNavigationState?.key) return;
 
     const inAuthGroup = segments[0] === "(auth)";

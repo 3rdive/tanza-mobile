@@ -1,7 +1,15 @@
+import { useDeviceLocation } from "@/hooks/location.hook";
+import { storageService, userService } from "@/lib/api";
+import { useAppDispatch, useAppSelector, useUser } from "@/redux/hooks/hooks";
+import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import type React from "react";
 import type { JSX } from "react"; // Declare JSX variable
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   SafeAreaView,
@@ -13,14 +21,6 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { userService, locationService, ILocationFeature, storageService } from "@/lib/api";
-import { useUser, useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
-import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
-import { useIsFocused } from "@react-navigation/native";
-import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
-import { useDeviceLocation } from "@/hooks/location.hook";
-import { MaterialIcons } from "@expo/vector-icons";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -47,14 +47,16 @@ interface FormErrors {
   phoneNumber?: string;
 }
 
-export default function EditProfileScreen(): JSX.Element { 
+export default function EditProfileScreen(): JSX.Element {
   const { user, access_token, setUser } = useUser();
   const initialFirst = (user as any)?.firstName || "";
   const initialLast = (user as any)?.lastName || "";
   const initialEmail = (user as any)?.email || "";
   const initialMobile = (user as any)?.mobile || "";
   const initialCode = (user as any)?.countryCode || "+234";
-  const initialPhoneDisplay = initialMobile ? `${initialCode}${initialMobile}` : "";
+  const initialPhoneDisplay = initialMobile
+    ? `${initialCode}${initialMobile}`
+    : "";
   const [formData, setFormData] = useState<EditProfileFormData>({
     firstName: initialFirst,
     lastName: initialLast,
@@ -63,16 +65,25 @@ export default function EditProfileScreen(): JSX.Element {
   });
 
   const initialUsersAddress = (user as any)?.usersAddress || null;
-  const [addressText, setAddressText] = useState<string>(initialUsersAddress?.name || "");
-  const [addressCoords, setAddressCoords] = useState<{ lat: number; lon: number } | null>(
-    initialUsersAddress && typeof initialUsersAddress.lat === "number" && typeof initialUsersAddress.lon === "number"
+  const [addressText, setAddressText] = useState<string>(
+    initialUsersAddress?.name || ""
+  );
+  const [addressCoords, setAddressCoords] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(
+    initialUsersAddress &&
+      typeof initialUsersAddress.lat === "number" &&
+      typeof initialUsersAddress.lon === "number"
       ? { lat: initialUsersAddress.lat, lon: initialUsersAddress.lon }
       : null
   );
 
   const dispatch = useAppDispatch();
   const isFocused = useIsFocused();
-  const selected = useAppSelector((s) => (s as any).locationSearch?.selected || null);
+  const selected = useAppSelector(
+    (s) => (s as any).locationSearch?.selected || null
+  );
   const { latitude, longitude, locationAddress } = useDeviceLocation();
 
   useEffect(() => {
@@ -135,11 +146,18 @@ export default function EditProfileScreen(): JSX.Element {
   // Consume selection from full-screen location search
   useEffect(() => {
     if (!isFocused) return;
-    if (selected && ((selected as any).context === "usersAddress" || !(selected as any).context)) {
+    if (
+      selected &&
+      ((selected as any).context === "usersAddress" ||
+        !(selected as any).context)
+    ) {
       const text = (selected as any).title || (selected as any).subtitle || "";
       setAddressText(text);
       if ((selected as any).lat && (selected as any).lon) {
-        setAddressCoords({ lat: (selected as any).lat, lon: (selected as any).lon });
+        setAddressCoords({
+          lat: (selected as any).lat,
+          lon: (selected as any).lon,
+        });
       } else {
         setAddressCoords(null);
       }
@@ -157,7 +175,10 @@ export default function EditProfileScreen(): JSX.Element {
       setAddressText(locationAddress || "Current Location");
       setAddressCoords({ lat: latitude, lon: longitude });
     } catch (e: any) {
-      Alert.alert("Location Error", e?.message || "Unable to fetch current location");
+      Alert.alert(
+        "Location Error",
+        e?.message || "Unable to fetch current location"
+      );
     }
   };
 
@@ -199,14 +220,21 @@ export default function EditProfileScreen(): JSX.Element {
         mobile,
       };
       if (addressText && addressCoords) {
-        payload.usersAddress = { name: addressText, lat: addressCoords.lat, lon: addressCoords.lon };
+        payload.usersAddress = {
+          name: addressText,
+          lat: addressCoords.lat,
+          lon: addressCoords.lon,
+        };
       }
 
       const resp = await userService.updateProfile(payload);
       if (resp?.success && resp.data) {
         // Update redux user while preserving token
         const updatedUser = resp.data as any;
-        await setUser({ access_token: access_token || null, user: updatedUser });
+        await setUser({
+          access_token: access_token || null,
+          user: updatedUser,
+        });
         Alert.alert("Success", "Your profile has been updated successfully.", [
           { text: "OK", onPress: () => router.back() },
         ]);
@@ -214,7 +242,10 @@ export default function EditProfileScreen(): JSX.Element {
         Alert.alert("Update failed", resp?.message || "Please try again");
       }
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || "Failed to update profile. Please try again.";
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to update profile. Please try again.";
       // Optionally mark field-specific errors based on backend message
       if (typeof msg === "string") {
         if (msg.toLowerCase().includes("email")) {
@@ -270,7 +301,11 @@ export default function EditProfileScreen(): JSX.Element {
         <View style={styles.profilePictureSection}>
           <View style={styles.avatarContainer}>
             {Boolean((user as any)?.profilePic) ? (
-              <Image source={{ uri: (user as any)?.profilePic as string }} style={styles.avatarFallback} contentFit="cover" />
+              <Image
+                source={{ uri: (user as any)?.profilePic as string }}
+                style={styles.avatarFallback}
+                contentFit="cover"
+              />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarText}>
@@ -285,31 +320,59 @@ export default function EditProfileScreen(): JSX.Element {
             disabled={isLoading}
             onPress={async () => {
               try {
-                const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                const perm =
+                  await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (perm.status !== "granted") {
-                  Alert.alert("Permission needed", "We need access to your photos to change your profile picture.");
+                  Alert.alert(
+                    "Permission needed",
+                    "We need access to your photos to change your profile picture."
+                  );
                   return;
                 }
-                const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1,1], quality: 0.8 });
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: true,
+                  aspect: [1, 1],
+                  quality: 0.8,
+                });
                 if (result.canceled) return;
                 const uri = result.assets?.[0]?.uri;
                 if (!uri) return;
-                const resp = await storageService.upload({ uri, type: "image/jpeg" });
+                const resp = await storageService.upload({
+                  uri,
+                  type: "image/jpeg",
+                });
                 if (resp?.success) {
                   const url = (resp.data as any)?.url as string;
                   if (url) {
-                    const update = await userService.updateProfile({ profilePic: url });
+                    const update = await userService.updateProfile({
+                      profilePic: url,
+                    });
                     if (update?.success && update.data) {
-                      await setUser({ access_token: access_token || null, user: update.data as any });
+                      await setUser({
+                        access_token: access_token || null,
+                        user: update.data as any,
+                      });
                     } else {
-                      Alert.alert("Update failed", update?.message || "Unable to update profile photo");
+                      Alert.alert(
+                        "Update failed",
+                        update?.message || "Unable to update profile photo"
+                      );
                     }
                   }
                 } else {
-                  Alert.alert("Upload failed", resp?.message || "Unable to upload image");
+                  Alert.alert(
+                    "Upload failed",
+                    resp?.message || "Unable to upload image"
+                  );
                 }
               } catch (e: any) {
-                Alert.alert("Error", e?.response?.data?.message || e?.message || "Unable to change photo");
+                Alert.alert(
+                  "Error",
+                  e?.response?.data?.message ||
+                    e?.message ||
+                    "Unable to change photo"
+                );
               }
             }}
           >
@@ -391,7 +454,12 @@ export default function EditProfileScreen(): JSX.Element {
                 style={styles.input}
                 value={addressText}
                 placeholder="Search address (e.g., Victoria Island)"
-                onFocus={() => router.push({ pathname: "/location-search", params: { context: "usersAddress" } })}
+                onFocus={() =>
+                  router.push({
+                    pathname: "/location-search",
+                    params: { context: "usersAddress" },
+                  })
+                }
                 showSoftInputOnFocus={false}
                 caretHidden
               />
@@ -409,8 +477,13 @@ export default function EditProfileScreen(): JSX.Element {
                 </TouchableOpacity>
               )}
             </View>
-            <TouchableOpacity onPress={useCurrentLocation} style={styles.useLocationBtn}>
-              <Text style={styles.useLocationBtnText}>Use current location</Text>
+            <TouchableOpacity
+              onPress={useCurrentLocation}
+              style={styles.useLocationBtn}
+            >
+              <Text style={styles.useLocationBtnText}>
+                Use current location
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

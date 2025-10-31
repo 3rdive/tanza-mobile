@@ -5,7 +5,7 @@ import { poppinsFonts } from "@/theme/fonts";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,19 +22,13 @@ import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82; // globally downscale sizes
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
-interface LocationSuggestion {
-  id: string;
-  title: string; // e.g., name or prominent label
-  subtitle: string; // e.g., full address line
-  lat?: number;
-  lon?: number;
-}
+// Local suggestion interface removed; using full-screen search exclusively
 
 interface BookingFormData {
   pickupLocation: string;
   dropOffLocation: string;
   noteForRider: string;
-  vehicleType: "rider" | "van";
+  isUrgent: boolean;
   numberOfItems: number;
 }
 
@@ -42,7 +36,7 @@ const defaultFormData: BookingFormData = {
   pickupLocation: "",
   dropOffLocation: "",
   noteForRider: "",
-  vehicleType: "rider",
+  isUrgent: false,
   numberOfItems: 1,
 };
 export default function BookLogisticsScreen() {
@@ -56,18 +50,8 @@ export default function BookLogisticsScreen() {
   });
   const [isBooking, setIsBooking] = useState(false);
 
-  const [pickupSuggestions, setPickupSuggestions] = useState<
-    LocationSuggestion[]
-  >([]);
-  const [dropoffSuggestions, setDropoffSuggestions] = useState<
-    LocationSuggestion[]
-  >([]);
-  const [showPickupSuggestions, setShowPickupSuggestions] = useState(false);
-  const [showDropoffSuggestions, setShowDropoffSuggestions] = useState(false);
+  // Using full-screen location search; local suggestion lists removed
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
-  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const [serviceCharge, setServiceCharge] = useState<number | null>(null);
-  const [eta, setEta] = useState<string | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [pickupCoords, setPickupCoords] = useState<{
     lat: number;
@@ -90,7 +74,6 @@ export default function BookLogisticsScreen() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const priceAnim = useRef(new Animated.Value(0)).current;
-  const vehicleSelectAnim = useRef(new Animated.Value(0)).current;
   const { send_type } = useLocalSearchParams();
 
   useEffect(() => {
@@ -107,7 +90,7 @@ export default function BookLogisticsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   // Apply selected location from full-screen search when returning focused
   useEffect(() => {
@@ -124,7 +107,6 @@ export default function BookLogisticsScreen() {
         } else {
           setPickupCoords(null);
         }
-        setShowPickupSuggestions(false);
       } else if ((selected as any).context === "dropoff") {
         setFormData((prev) => ({ ...prev, dropOffLocation: text }));
         if ((selected as any).lat && (selected as any).lon) {
@@ -135,42 +117,28 @@ export default function BookLogisticsScreen() {
         } else {
           setDropoffCoords(null);
         }
-        setShowDropoffSuggestions(false);
       }
       dispatch(clearSelectedLocation());
     }
-  }, [isFocused, selected]);
+  }, [dispatch, isFocused, selected]);
 
-  useEffect(() => {
-    // Calculate price when both coordinates are selected
-    if (pickupCoords && dropoffCoords) {
-      calculatePrice();
-    } else {
-      setCalculatedPrice(null);
-      setDeliveryFee(null);
-      setServiceCharge(null);
-      setEta(null);
-    }
-  }, [pickupCoords, dropoffCoords, formData.vehicleType]);
-
-  const calculatePrice = async () => {
+  const calculatePrice = useCallback(async () => {
     if (!pickupCoords || !dropoffCoords) return;
+    console.log({ pickupCoords, dropoffCoords, isUrgent: formData.isUrgent });
     try {
       setIsCalculating(true);
-      const vehicle = formData.vehicleType === "rider" ? "bike" : "van";
+      const vehicle = "bike"; // Always use bike
       const res = await orderService.calculateCharge({
         startLat: pickupCoords.lat,
         startLon: pickupCoords.lon,
         endLat: dropoffCoords.lat,
         endLon: dropoffCoords.lon,
         vehicleType: vehicle,
+        isUrgent: formData.isUrgent,
       });
       if (res?.success) {
         const d = res.data as any;
         setCalculatedPrice(d.totalAmount ?? null);
-        setDeliveryFee(d.deliveryFee ?? null);
-        setServiceCharge(d.serviceCharge ?? null);
-        setEta(d.duration ?? null);
         // Animate price appearance
         Animated.spring(priceAnim, {
           toValue: 1,
@@ -195,49 +163,22 @@ export default function BookLogisticsScreen() {
     } finally {
       setIsCalculating(false);
     }
-  };
+  }, [dropoffCoords, formData.isUrgent, pickupCoords, priceAnim]);
 
-  const selectLocation = (
-    location: LocationSuggestion,
-    type: "pickup" | "dropoff"
-  ) => {
-    const text = location.title || location.subtitle || "";
-    if (type === "pickup") {
-      setFormData((prev) => ({ ...prev, pickupLocation: text }));
-      setPickupCoords(
-        location.lat && location.lon
-          ? { lat: location.lat, lon: location.lon }
-          : null
-      );
-      setShowPickupSuggestions(false);
+  useEffect(() => {
+    // Calculate price when both coordinates are selected
+    if (pickupCoords && dropoffCoords) {
+      calculatePrice();
     } else {
-      setFormData((prev) => ({ ...prev, dropOffLocation: text }));
-      setDropoffCoords(
-        location.lat && location.lon
-          ? { lat: location.lat, lon: location.lon }
-          : null
-      );
-      setShowDropoffSuggestions(false);
+      setCalculatedPrice(null);
     }
-  };
 
-  const selectVehicleType = (type: "rider" | "van") => {
-    setFormData((prev) => ({ ...prev, vehicleType: type }));
+    return () => {
+      setCalculatedPrice(null);
+    };
+  }, [pickupCoords, dropoffCoords, calculatePrice]);
 
-    // Animate vehicle selection
-    Animated.sequence([
-      Animated.timing(vehicleSelectAnim, {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(vehicleSelectAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
+  // local suggestion selection removed; using full-screen search route
 
   // Helper to compare names/coordinates
   const coordsEqual = (
@@ -291,7 +232,6 @@ export default function BookLogisticsScreen() {
       }
       setFormData((p) => ({ ...p, pickupLocation: defName }));
       setPickupCoords(defCoords);
-      setShowPickupSuggestions(false);
     } else {
       if (
         coordsEqual(pickupCoords, defCoords) ||
@@ -305,7 +245,6 @@ export default function BookLogisticsScreen() {
       }
       setFormData((p) => ({ ...p, dropOffLocation: defName }));
       setDropoffCoords(defCoords);
-      setShowDropoffSuggestions(false);
     }
   };
 
@@ -331,7 +270,7 @@ export default function BookLogisticsScreen() {
       return;
     }
 
-    const vehicle = formData.vehicleType === "rider" ? "bike" : "van";
+    const vehicle = "bike"; // Always use bike
 
     Alert.alert(
       "Confirm Booking",
@@ -350,6 +289,7 @@ export default function BookLogisticsScreen() {
                   endLat: dropoffCoords.lat,
                   endLon: dropoffCoords.lon,
                   vehicleType: vehicle,
+                  isUrgent: formData.isUrgent,
                 },
                 {
                   dropOffLocation: formData.dropOffLocation,
@@ -430,7 +370,27 @@ export default function BookLogisticsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Book Logistics</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity
+          style={styles.urgentToggle}
+          onPress={() =>
+            setFormData((prev) => ({ ...prev, isUrgent: !prev.isUrgent }))
+          }
+        >
+          <View
+            style={[
+              styles.toggleSwitch,
+              formData.isUrgent && styles.toggleSwitchActive,
+            ]}
+          >
+            <View
+              style={[
+                styles.toggleKnob,
+                formData.isUrgent && styles.toggleKnobActive,
+              ]}
+            />
+          </View>
+          <Text style={styles.urgentLabel}>Urgent</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -455,24 +415,9 @@ export default function BookLogisticsScreen() {
           ]}
         >
           {/* Location Inputs */}
-          <View
-            style={[
-              styles.locationSection,
-              (showPickupSuggestions && pickupSuggestions.length > 0) ||
-              (showDropoffSuggestions && dropoffSuggestions.length > 0)
-                ? styles.locationSectionElevated
-                : null,
-            ]}
-          >
+          <View style={styles.locationSection}>
             {/* Pickup Location Input */}
-            <View
-              style={[
-                styles.locationInputContainer,
-                showPickupSuggestions &&
-                  pickupSuggestions.length > 0 &&
-                  styles.raised,
-              ]}
-            >
+            <View style={styles.locationInputContainer}>
               <Text style={styles.inputLabel}>📍 Pickup Location</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
@@ -496,7 +441,6 @@ export default function BookLogisticsScreen() {
                     onPress={() => {
                       setFormData((p) => ({ ...p, pickupLocation: "" }));
                       setPickupCoords(null);
-                      setShowPickupSuggestions(false);
                     }}
                     style={styles.clearBtn}
                   >
@@ -514,26 +458,6 @@ export default function BookLogisticsScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              {showPickupSuggestions && pickupSuggestions.length > 0 && (
-                <Animated.View
-                  style={[styles.suggestionsContainer, { opacity: fadeAnim }]}
-                >
-                  {pickupSuggestions.map((location) => (
-                    <TouchableOpacity
-                      key={location.id}
-                      style={styles.suggestionItem}
-                      onPress={() => selectLocation(location, "pickup")}
-                    >
-                      <Text style={styles.suggestionName}>
-                        {location.title}
-                      </Text>
-                      <Text style={styles.suggestionAddress}>
-                        {location.subtitle}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </Animated.View>
-              )}
             </View>
 
             <View style={styles.locationConnector}>
@@ -542,14 +466,7 @@ export default function BookLogisticsScreen() {
             </View>
 
             {/* Drop-off Location Input */}
-            <View
-              style={[
-                styles.locationInputContainer,
-                showDropoffSuggestions &&
-                  dropoffSuggestions.length > 0 &&
-                  styles.raised,
-              ]}
-            >
+            <View style={styles.locationInputContainer}>
               <Text style={styles.inputLabel}>🎯 Drop-off Location</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
@@ -573,7 +490,6 @@ export default function BookLogisticsScreen() {
                     onPress={() => {
                       setFormData((p) => ({ ...p, dropOffLocation: "" }));
                       setDropoffCoords(null);
-                      setShowDropoffSuggestions(false);
                     }}
                     style={styles.clearBtn}
                   >
@@ -591,58 +507,10 @@ export default function BookLogisticsScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              {showDropoffSuggestions && dropoffSuggestions.length > 0 && (
-                <Animated.View
-                  style={[styles.suggestionsContainer, { opacity: fadeAnim }]}
-                >
-                  {dropoffSuggestions.map((location) => (
-                    <TouchableOpacity
-                      key={location.id}
-                      style={styles.suggestionItem}
-                      onPress={() => selectLocation(location, "dropoff")}
-                    >
-                      <Text style={styles.suggestionName}>
-                        {location.title}
-                      </Text>
-                      <Text style={styles.suggestionAddress}>
-                        {location.subtitle}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </Animated.View>
-              )}
             </View>
           </View>
 
-          {/* Vehicle Type Selection */}
-          <Animated.View style={[styles.vehicleSection]}>
-            <Text style={styles.sectionTitle}>🚗 Choose Vehicle Type</Text>
-            <View style={styles.vehicleOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.vehicleOption,
-                  formData.vehicleType === "rider" && styles.selectedVehicle,
-                ]}
-                onPress={() => selectVehicleType("rider")}
-              >
-                <Text style={styles.vehicleIcon}>🏍️</Text>
-                <Text style={styles.vehicleTitle}>Rider</Text>
-                <Text style={styles.vehicleSubtitle}>Fast delivery</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.vehicleOption,
-                  formData.vehicleType === "van" && styles.selectedVehicle,
-                ]}
-                onPress={() => selectVehicleType("van")}
-              >
-                <Text style={styles.vehicleIcon}>🚐</Text>
-                <Text style={styles.vehicleTitle}>Van</Text>
-                <Text style={styles.vehicleSubtitle}>Large items</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+          {/* Vehicle Type Selection - REMOVED */}
 
           {/* Note for Rider */}
           <View style={styles.noteSection}>
@@ -1130,5 +998,36 @@ const styles = StyleSheet.create({
   raised: {
     zIndex: 3000,
     elevation: 600,
+  },
+  urgentToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  toggleSwitch: {
+    width: rs(50),
+    height: rs(30),
+    borderRadius: rs(15),
+    backgroundColor: "#e0e0e0",
+    marginRight: rs(8),
+    justifyContent: "center",
+    paddingHorizontal: rs(2),
+  },
+  toggleSwitchActive: {
+    backgroundColor: "#00B624",
+  },
+  toggleKnob: {
+    width: rs(26),
+    height: rs(26),
+    borderRadius: rs(13),
+    backgroundColor: "#fff",
+    alignSelf: "flex-start",
+  },
+  toggleKnobActive: {
+    alignSelf: "flex-end",
+  },
+  urgentLabel: {
+    fontSize: rs(14),
+    fontWeight: "600",
+    color: "#000",
   },
 });

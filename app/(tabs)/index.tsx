@@ -334,7 +334,7 @@ export default function HomeScreen() {
             </Text>
             <TouchableOpacity
               style={styles.fundWalletButton}
-              onPress={() => router.push("/rider/rider-wallet")}
+              onPress={() => router.push("/payment")}
             >
               <Text style={styles.fundWalletText} allowFontScaling={false}>
                 Fund Wallet
