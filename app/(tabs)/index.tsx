@@ -1,5 +1,14 @@
 // HomeScreen.ts
-import { transactionService, userService, walletService } from "@/lib/api";
+import ReviewBottomSheet from "@/components/reviews/review-bottom-sheet";
+import { useSocketTasks } from "@/hooks/use-socket-tasks.hook";
+import { useTasks } from "@/hooks/use-task.hook";
+import {
+  ITaskReference,
+  ratingService,
+  transactionService,
+  userService,
+  walletService,
+} from "@/lib/api";
 import { StorageKeys, StorageMechanics } from "@/lib/storage-mechanics";
 import { useUser, useWallet } from "@/redux/hooks/hooks";
 import { Image } from "expo-image";
@@ -7,6 +16,7 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -33,6 +43,30 @@ export default function HomeScreen() {
   const { balance, setWallet } = useWallet();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [showReview, setShowReview] = useState(false);
+  const [currentReviewTask, setCurrentReviewTask] = useState<{
+    taskId: string;
+    user: { name: string; avatar?: string; userId: string };
+  } | null>(null);
+  const {
+    tasks,
+    loading: tasksLoading,
+    completeTask,
+    cancelTask,
+    refetch: refetchTasks,
+  } = useTasks({ status: "pending" });
+
+  // Socket.IO integration for real-time task updates
+  useSocketTasks({
+    onNewTask: (newTask) => {
+      console.log("📦 New task received via socket:", newTask);
+      // Refresh tasks to include the new one
+      refetchTasks();
+    },
+    enabled: true,
+    autoConnect: true,
+  });
 
   const load = async (isInitial: boolean = false) => {
     if (isInitial) {
@@ -117,6 +151,36 @@ export default function HomeScreen() {
 
     load(true);
   }, []);
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      // Find the first review_request task
+      const reviewTask = tasks.find(
+        (task) => task.category === "request_review"
+      );
+
+      if (reviewTask) {
+        try {
+          // Parse the reference JSON to get user info
+          const reference: ITaskReference = JSON.parse(reviewTask.reference);
+
+          setCurrentReviewTask({
+            taskId: reviewTask.id,
+            user: {
+              name: `${reference.firstName} ${reference.lastName}`,
+              avatar: reference.profilePic,
+              userId: reference.userId,
+            },
+          });
+
+          // Show review modal
+          setShowReview(true);
+        } catch (error) {
+          console.error("Error parsing task reference:", error);
+        }
+      }
+    }
+  }, [tasks]);
 
   const getTransactionIcon = (type: any) => {
     switch (type) {
@@ -215,7 +279,54 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
+  const handleCloseReview = async () => {
+    // If a review task is active and user dismisses without submitting, mark it cancelled
+    if (currentReviewTask) {
+      try {
+        await cancelTask(currentReviewTask.taskId);
+      } catch (e) {
+        console.warn("Failed to cancel task on review close", e);
+      }
+    }
+    setShowReview(false);
+    setCurrentReviewTask(null);
+  };
 
+  const handleSubmitReview = async (payload: {
+    rating: number;
+    comments: string[];
+  }) => {
+    if (!currentReviewTask) {
+      console.error("No review task available");
+      return;
+    }
+
+    try {
+      // Submit the rating
+      await ratingService.rateUser({
+        targetUserId: currentReviewTask.user.userId,
+        starRating: payload.rating,
+        comment: payload.comments.join(", "),
+      });
+
+      // Mark task as complete
+      await completeTask(currentReviewTask.taskId);
+
+      // Close modal and reset
+      setShowReview(false);
+      setCurrentReviewTask(null);
+
+      // Show success feedback
+      // await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Thanks", "Your review has been submitted");
+    } catch (error: any) {
+      console.error("Error submitting review:", error);
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to submit review. Please try again."
+      );
+    }
+  };
   const formattedBalance = new Intl.NumberFormat("en-US").format(balance ?? 0);
 
   return (
@@ -390,6 +501,13 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      <ReviewBottomSheet
+        visible={showReview}
+        onClose={handleCloseReview}
+        user={currentReviewTask?.user || null}
+        onSubmit={handleSubmitReview}
+      />
     </SafeAreaView>
   );
 }

@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
-export const BASE_URL = "https://f531b2fde2c8.ngrok-free.app";
+export const BASE_URL = "http://localhost:3030";
 export const AXIOS: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
@@ -413,6 +413,7 @@ export interface ICalculateChargeParams {
   endLon: number;
   vehicleType: string; // e.g., bicycle | bike | van etc.
   isUrgent: boolean;
+  urgencyFee?: number; // urgency fee amount
 }
 
 export interface ICalculateChargeData {
@@ -464,6 +465,7 @@ export const orderService = {
       endLon: number;
       vehicleType: string;
       isUrgent: boolean;
+      urgencyFee?: number;
     },
     payload: ICreateOrderPayload
   ) => {
@@ -565,6 +567,84 @@ export const storageService = {
     >("/api/v1/storage-media/upload", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    return data;
+  },
+} as const;
+
+// Tasks
+export type TaskCategory = "request_review" | string;
+export type TaskStatus = "pending" | "completed" | "cancelled";
+
+export interface ITaskReference {
+  userId: string;
+  profilePic: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface ITask {
+  id: string;
+  category: TaskCategory;
+  status: TaskStatus;
+  userId: string;
+  reference: string; // JSON string containing ITaskReference
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface ITaskPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ITaskListResponse {
+  success: boolean;
+  message: string;
+  data: ITask[];
+  pagination: ITaskPagination;
+}
+
+export interface IRateUserPayload {
+  targetUserId: string;
+  starRating: number;
+  comment: string;
+}
+
+export const taskService = {
+  getTasks: async (params: {
+    status?: TaskStatus;
+    page?: number;
+    limit?: number;
+  }) => {
+    const { data } = await AXIOS.get<ITaskListResponse>("/api/v1/task", {
+      params,
+    });
+    return data;
+  },
+  completeTask: async (taskId: string) => {
+    const { data } = await AXIOS.patch<IApiResponse<ITask>>(
+      `/api/v1/task/${taskId}/complete`
+    );
+    return data;
+  },
+  cancelTask: async (taskId: string) => {
+    console.log("Cancelling task:", taskId);
+    const { data } = await AXIOS.patch<IApiResponse<ITask>>(
+      `/api/v1/task/${taskId}/cancel`
+    );
+    return data;
+  },
+} as const;
+
+// Ratings
+export const ratingService = {
+  rateUser: async (payload: IRateUserPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<any>>(
+      "/api/v1/ratings/rate",
+      payload
+    );
     return data;
   },
 } as const;

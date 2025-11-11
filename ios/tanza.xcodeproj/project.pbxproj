@@ -7,29 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		054A2E861F42649C2E7F505B /* libPods-tanza.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0CED7DAE73EB89641B7B993A /* libPods-tanza.a */; };
+		00FCC43BC7AF8F0D3A460363 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF3136203987C9D27DF49AC /* ExpoModulesProvider.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		7E14C3CADF03C711D0F4E9DF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 76CECD86F5DE7932D6AD3A89 /* PrivacyInfo.xcprivacy */; };
+		4A6E6C431598C3B1724E476B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5964B9211E3A131F3C564C10 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		E491327E4931A0B072586027 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3826B89174F97928A11B3E /* ExpoModulesProvider.swift */; };
+		C961D955A9A23BEA6674DAAB /* libPods-tanza.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 18C28F1E992179A3CAFEEAD5 /* libPods-tanza.a */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0CED7DAE73EB89641B7B993A /* libPods-tanza.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-tanza.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* tanza.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tanza.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = tanza/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = tanza/Info.plist; sourceTree = "<group>"; };
-		76CECD86F5DE7932D6AD3A89 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = tanza/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		7F5F1484B06284BF36B269D1 /* Pods-tanza.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-tanza.debug.xcconfig"; path = "Target Support Files/Pods-tanza/Pods-tanza.debug.xcconfig"; sourceTree = "<group>"; };
-		8936BB28C0EC65B68C064965 /* Pods-tanza.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-tanza.release.xcconfig"; path = "Target Support Files/Pods-tanza/Pods-tanza.release.xcconfig"; sourceTree = "<group>"; };
+		18C28F1E992179A3CAFEEAD5 /* libPods-tanza.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-tanza.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5964B9211E3A131F3C564C10 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = tanza/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		9EB7914281F8E96AE9FC92CA /* Pods-tanza.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-tanza.debug.xcconfig"; path = "Target Support Files/Pods-tanza/Pods-tanza.debug.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = tanza/SplashScreen.storyboard; sourceTree = "<group>"; };
-		AC3826B89174F97928A11B3E /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-tanza/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		ABF3136203987C9D27DF49AC /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-tanza/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = tanza/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* tanza-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "tanza-Bridging-Header.h"; path = "tanza/tanza-Bridging-Header.h"; sourceTree = "<group>"; };
+		F1368296F3D71A6C4977B3A0 /* Pods-tanza.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-tanza.release.xcconfig"; path = "Target Support Files/Pods-tanza/Pods-tanza.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				054A2E861F42649C2E7F505B /* libPods-tanza.a in Frameworks */,
+				C961D955A9A23BEA6674DAAB /* libPods-tanza.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,36 +53,36 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				76CECD86F5DE7932D6AD3A89 /* PrivacyInfo.xcprivacy */,
+				5964B9211E3A131F3C564C10 /* PrivacyInfo.xcprivacy */,
 			);
 			name = tanza;
-			sourceTree = "<group>";
-		};
-		23DEFE93C2E48368303FFC22 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				D0CD6FD02B6B8B4C4BC7E088 /* tanza */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				0CED7DAE73EB89641B7B993A /* libPods-tanza.a */,
+				18C28F1E992179A3CAFEEAD5 /* libPods-tanza.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		4C12097B6A1CA69097DA1E31 /* Pods */ = {
+		36CCFB900B296138E294FB9F /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				7F5F1484B06284BF36B269D1 /* Pods-tanza.debug.xcconfig */,
-				8936BB28C0EC65B68C064965 /* Pods-tanza.release.xcconfig */,
+				9EB7914281F8E96AE9FC92CA /* Pods-tanza.debug.xcconfig */,
+				F1368296F3D71A6C4977B3A0 /* Pods-tanza.release.xcconfig */,
 			);
 			name = Pods;
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		700172DF96ABAF238EEB2657 /* tanza */ = {
+			isa = PBXGroup;
+			children = (
+				ABF3136203987C9D27DF49AC /* ExpoModulesProvider.swift */,
+			);
+			name = tanza;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -99,8 +99,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				4C12097B6A1CA69097DA1E31 /* Pods */,
-				23DEFE93C2E48368303FFC22 /* ExpoModulesProviders */,
+				36CCFB900B296138E294FB9F /* Pods */,
+				F8CBD8A22274CB77C625B7F6 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -124,12 +124,12 @@
 			path = tanza/Supporting;
 			sourceTree = "<group>";
 		};
-		D0CD6FD02B6B8B4C4BC7E088 /* tanza */ = {
+		F8CBD8A22274CB77C625B7F6 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				AC3826B89174F97928A11B3E /* ExpoModulesProvider.swift */,
+				700172DF96ABAF238EEB2657 /* tanza */,
 			);
-			name = tanza;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "tanza" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				7823C5C7B1B7385F87FEA990 /* [Expo] Configure project */,
+				DE439D056960D55E40EB0BC7 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				DD0D39215E1C5F77E446D34A /* [CP] Embed Pods Frameworks */,
+				F199BBB195E91571E6340D99 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				7E14C3CADF03C711D0F4E9DF /* PrivacyInfo.xcprivacy in Resources */,
+				4A6E6C431598C3B1724E476B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -240,25 +240,6 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		7823C5C7B1B7385F87FEA990 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-tanza/expo-configure-project.sh\"\n";
-		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -301,7 +282,26 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-tanza/Pods-tanza-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		DD0D39215E1C5F77E446D34A /* [CP] Embed Pods Frameworks */ = {
+		DE439D056960D55E40EB0BC7 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-tanza/expo-configure-project.sh\"\n";
+		};
+		F199BBB195E91571E6340D99 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -327,7 +327,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				E491327E4931A0B072586027 /* ExpoModulesProvider.swift in Sources */,
+				00FCC43BC7AF8F0D3A460363 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -336,7 +336,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7F5F1484B06284BF36B269D1 /* Pods-tanza.debug.xcconfig */;
+			baseConfigurationReference = 9EB7914281F8E96AE9FC92CA /* Pods-tanza.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -372,7 +372,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8936BB28C0EC65B68C064965 /* Pods-tanza.release.xcconfig */;
+			baseConfigurationReference = F1368296F3D71A6C4977B3A0 /* Pods-tanza.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

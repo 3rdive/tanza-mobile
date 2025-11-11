@@ -36,6 +36,23 @@ export default function OTPVerificationScreen() {
   }, []);
 
   const handleOtpChange = (value: string, index: number) => {
+    // Check if a full OTP code (4 digits) is being pasted
+    if (value.length === 4 && /^\d{4}$/.test(value)) {
+      // Split the pasted value into individual digits
+      const newOtp = value.split('');
+      setOtp(newOtp);
+
+      // Focus the last input after pasting
+      inputRefs.current[3]?.focus();
+
+      // Auto-verify when all digits are filled
+      setTimeout(async () => {
+        // await consumeOtp();
+      }, 500);
+      return;
+    }
+
+    // Handle single character input (existing logic)
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -165,7 +182,7 @@ export default function OTPVerificationScreen() {
               onChangeText={(value) => handleOtpChange(value, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="numeric"
-              maxLength={1}
+              // maxLength={1}
               textAlign="center"
             />
           ))}
@@ -201,7 +218,7 @@ export default function OTPVerificationScreen() {
             style={[
               styles.nextText,
               (!otp.every((digit) => digit !== "") || isLogin) &&
-                styles.disabledText,
+              styles.disabledText,
             ]}
           >
             {isLogin ? "validating" : "Next"} →

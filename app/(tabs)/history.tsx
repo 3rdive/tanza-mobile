@@ -24,7 +24,7 @@ type TransactionStatus =
   | "completed"
   | "failed"
   | "refunded"
-  | "in_transit"
+  | "transit"
   | "pending"
   | "accepted"
   | "delivered";
@@ -67,7 +67,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
       let status: TransactionStatus;
       if ((t.type || "").toUpperCase() === "ORDER" && t.orderStatus) {
         const os = String(t.orderStatus).toLowerCase();
-        const allowed = ["pending", "accepted", "delivered", "in_transit"];
+        const allowed = ["pending", "accepted", "delivered", "transit"];
         status = (allowed.includes(os) ? os : "pending") as TransactionStatus;
       } else {
         // Map non-order statuses: complete, failed, refunded → completed, failed, refunded
@@ -156,7 +156,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
         return "#22c55e";
       case "refunded":
         return "#06b6d4";
-      case "in_transit":
+      case "transit":
         return "#f59e0b";
       case "pending":
         return "#6b7280";
