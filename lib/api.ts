@@ -424,6 +424,16 @@ export interface ICalculateChargeData {
 }
 
 export interface ICreateOrderPayload {
+  sender: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  recipient: {
+    name: string;
+    email: string;
+    phone: string;
+  };
   dropOffLocation: string;
   pickUpLocation: string;
   userOrderRole: "sender" | "recipient" | string;
@@ -457,6 +467,31 @@ export const orderService = {
     );
     return data;
   },
+  calculateMultipleDeliveryCharge: async (params: {
+    pickupLocation: [number, number]; // [lon, lat]
+    deliveryLocations: [number, number][]; // [[lon, lat], ...]
+    isUrgent: boolean;
+    urgencyFee?: number;
+  }) => {
+    const { data } = await AXIOS.post<
+      IApiResponse<{
+        totalAmount: number;
+        totalDeliveryFee: number;
+        serviceCharge: number;
+        pickupLocation: [number, number];
+        deliveries: {
+          deliveryLocation: [number, number];
+          distance_from_pickup_km: number;
+          duration_from_pickup: string;
+          deliveryFee: number;
+        }[];
+        totalDistanceKm: number;
+        estimatedTotalDuration: string;
+        vehicleType: string;
+      }>
+    >("/api/v1/order/calculate-multiple-delivery-charge", params);
+    return data;
+  },
   create: async (
     query: {
       startLat: number;
@@ -474,6 +509,55 @@ export const orderService = {
       payload,
       { params: query }
     );
+    return data;
+  },
+  createMultipleDelivery: async (payload: {
+    sender: {
+      name: string;
+      email: string;
+      phone: string;
+    };
+    pickUpAddress: string;
+    pickUpCoordinates: [number, number]; // [lon, lat]
+    deliveryLocations: {
+      address: string;
+      coordinates: [number, number]; // [lon, lat]
+      recipient: {
+        name: string;
+        email: string;
+        phone: string;
+      };
+    }[];
+    userOrderRole: string;
+    noteForRider?: string | null;
+    isUrgent: boolean;
+    urgencyFee?: number;
+  }) => {
+    const { data } = await AXIOS.post<IApiResponse<IOrderData>>(
+      "/api/v1/order/multiple-delivery",
+      payload
+    );
+    return data;
+  },
+  getAddressBook: async (query?: string) => {
+    const { data } = await AXIOS.get<{
+      success: boolean;
+      message: string;
+      data: {
+        name: string;
+        email: string;
+        phone: string;
+        role: "sender" | "recipient";
+      }[];
+      pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+    }>("/api/v1/order/address-book", {
+      params: query ? { query } : undefined,
+    });
     return data;
   },
 } as const;

@@ -1,20 +1,38 @@
-import { BookingFormData, Coordinates } from "@/types/booking.types";
+import {
+  BookingFormData,
+  ContactInfo,
+  Coordinates,
+} from "@/types/booking.types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated } from "react-native";
 
 const defaultFormData: BookingFormData = {
   pickupLocation: "",
-  dropOffLocation: "",
   noteForRider: "",
   isUrgent: false,
   numberOfItems: 1,
   urgencyFee: 0,
+  sender: {
+    name: "",
+    email: "",
+    phone: "",
+  },
+  deliveryLocations: [
+    {
+      address: "",
+      coordinates: null,
+      recipient: {
+        name: "",
+        email: "",
+        phone: "",
+      },
+    },
+  ],
 };
 
 export const useBookingForm = () => {
   const [formData, setFormData] = useState<BookingFormData>(defaultFormData);
   const [pickupCoords, setPickupCoords] = useState<Coordinates | null>(null);
-  const [dropoffCoords, setDropoffCoords] = useState<Coordinates | null>(null);
   const [isBooking, setIsBooking] = useState(false);
 
   const updateField = useCallback(
@@ -29,11 +47,6 @@ export const useBookingForm = () => {
     setPickupCoords(null);
   }, []);
 
-  const clearDropoff = useCallback(() => {
-    setFormData((prev) => ({ ...prev, dropOffLocation: "" }));
-    setDropoffCoords(null);
-  }, []);
-
   const setPickupLocation = useCallback(
     (location: string, coords: Coordinates) => {
       setFormData((prev) => ({ ...prev, pickupLocation: location }));
@@ -42,10 +55,65 @@ export const useBookingForm = () => {
     []
   );
 
-  const setDropoffLocation = useCallback(
-    (location: string, coords: Coordinates) => {
-      setFormData((prev) => ({ ...prev, dropOffLocation: location }));
-      setDropoffCoords(coords);
+  const addDeliveryLocation = useCallback(() => {
+    setFormData((prev) => ({
+      ...prev,
+      deliveryLocations: [
+        ...prev.deliveryLocations,
+        {
+          address: "",
+          coordinates: null,
+          recipient: {
+            name: "",
+            email: "",
+            phone: "",
+          },
+        },
+      ],
+    }));
+  }, []);
+
+  const removeDeliveryLocation = useCallback((index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      deliveryLocations: prev.deliveryLocations.filter((_, i) => i !== index),
+    }));
+  }, []);
+
+  const updateDeliveryLocation = useCallback(
+    (index: number, address: string, coords: Coordinates) => {
+      setFormData((prev) => ({
+        ...prev,
+        deliveryLocations: prev.deliveryLocations.map((delivery, i) =>
+          i === index ? { ...delivery, address, coordinates: coords } : delivery
+        ),
+      }));
+    },
+    []
+  );
+
+  const clearDeliveryLocation = useCallback((index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      deliveryLocations: prev.deliveryLocations.map((delivery, i) =>
+        i === index ? { ...delivery, address: "", coordinates: null } : delivery
+      ),
+    }));
+  }, []);
+
+  const updateDeliveryRecipient = useCallback(
+    (index: number, field: keyof ContactInfo, value: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        deliveryLocations: prev.deliveryLocations.map((delivery, i) =>
+          i === index
+            ? {
+                ...delivery,
+                recipient: { ...delivery.recipient, [field]: value },
+              }
+            : delivery
+        ),
+      }));
     },
     []
   );
@@ -58,24 +126,36 @@ export const useBookingForm = () => {
     }));
   }, []);
 
+  const updateSenderField = useCallback(
+    (field: keyof ContactInfo, value: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        sender: { ...prev.sender, [field]: value },
+      }));
+    },
+    []
+  );
+
   const clearAllStates = useCallback(() => {
     setFormData(defaultFormData);
     setPickupCoords(null);
-    setDropoffCoords(null);
     setIsBooking(false);
   }, []);
 
   return {
     formData,
     pickupCoords,
-    dropoffCoords,
     isBooking,
     setIsBooking,
     updateField,
+    updateSenderField,
     clearPickup,
-    clearDropoff,
     setPickupLocation,
-    setDropoffLocation,
+    addDeliveryLocation,
+    removeDeliveryLocation,
+    updateDeliveryLocation,
+    clearDeliveryLocation,
+    updateDeliveryRecipient,
     resetUrgency,
     clearAllStates,
   };

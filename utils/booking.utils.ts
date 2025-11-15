@@ -1,4 +1,17 @@
-import { Coordinates, DefaultAddress } from "@/types/booking.types";
+import {
+  ContactInfo,
+  Coordinates,
+  DefaultAddress,
+  DeliveryLocation,
+} from "@/types/booking.types";
+
+/**
+ * Validate if contact info is completely filled
+ * Email is optional, only name and phone are required
+ */
+export const isValidContactInfo = (contact: ContactInfo): boolean => {
+  return !!(contact.name.trim() && contact.phone.trim());
+};
 
 /**
  * Compare two coordinate objects for equality within epsilon tolerance
@@ -40,24 +53,54 @@ export const isValidDefaultAddress = (
 };
 
 /**
- * Check if booking form is ready for submission
+ * Check if all delivery locations are valid
+ */
+export const areDeliveriesValid = (
+  deliveryLocations: DeliveryLocation[]
+): boolean => {
+  if (deliveryLocations.length === 0) return false;
+
+  return deliveryLocations.every(
+    (delivery) =>
+      delivery.address.trim() !== "" &&
+      delivery.coordinates !== null &&
+      isValidContactInfo(delivery.recipient)
+  );
+};
+
+/**
+ * Check if there are duplicate recipients in delivery locations
+ */
+export const hasDuplicateRecipients = (
+  deliveryLocations: DeliveryLocation[]
+): boolean => {
+  const phones = deliveryLocations.map((d) =>
+    d.recipient.phone.trim().toLowerCase()
+  );
+  return new Set(phones).size !== phones.length;
+};
+
+/**
+ * Check if booking form is ready for submission (multiple deliveries)
  */
 export const canSubmitBooking = (
   pickupLocation: string,
-  dropoffLocation: string,
   pickupCoords: Coordinates | null,
-  dropoffCoords: Coordinates | null,
+  deliveryLocations: DeliveryLocation[],
   calculatedPrice: number | null,
   isCalculating: boolean,
-  isBooking: boolean
+  isBooking: boolean,
+  sender: ContactInfo
 ): boolean => {
   return !!(
     pickupLocation &&
-    dropoffLocation &&
     pickupCoords &&
-    dropoffCoords &&
+    deliveryLocations.length > 0 &&
+    areDeliveriesValid(deliveryLocations) &&
+    !hasDuplicateRecipients(deliveryLocations) &&
     calculatedPrice &&
     !isCalculating &&
-    !isBooking
+    !isBooking &&
+    isValidContactInfo(sender)
   );
 };

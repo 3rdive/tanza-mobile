@@ -1,4 +1,7 @@
 export { BookingOverlay } from "./BookingOverlay";
+export { ContactInfoSection } from "./ContactInfoSection";
+export { DeliveryLocationsSection } from "./DeliveryLocationsSection";
+export { DeliveryRecipientSection } from "./DeliveryRecipientSection";
 export { LocationInputSection } from "./LocationInputSection";
 export { NoteSection } from "./NoteSection";
 export { PriceFooter } from "./PriceFooter";

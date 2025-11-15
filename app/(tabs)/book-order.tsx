@@ -1,11 +1,13 @@
 import {
   BookingOverlay,
-  LocationInputSection,
+  ContactInfoSection,
+  DeliveryRecipientSection,
   NoteSection,
   PriceFooter,
   UrgencyModal,
   UrgentToggle,
 } from "@/components/booking";
+import { useBookOrder } from "@/hooks/use-book-order.hook";
 import {
   useBookingAnimations,
   useBookingForm,
@@ -15,13 +17,12 @@ import { useUrgencyModal } from "@/hooks/use-urgency-modal.hook";
 import { orderService } from "@/lib/api";
 import { useAppDispatch, useAppSelector, useUser } from "@/redux/hooks/hooks";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
-import { Coordinates, LocationContext } from "@/types/booking.types";
+import { Coordinates } from "@/types/booking.types";
 import {
   canSubmitBooking,
-  coordsEqual,
-  isValidDefaultAddress,
-  nameEqual,
+  hasDuplicateRecipients,
 } from "@/utils/booking.utils";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect } from "react";
@@ -32,12 +33,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
+
+const MAX_DELIVERIES = 10;
+
 export default function BookLogisticsScreen() {
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
@@ -47,18 +53,21 @@ export default function BookLogisticsScreen() {
   const { send_type } = useLocalSearchParams();
   const { user } = useUser();
 
-  // Custom hooks
+  // Booking form + animations
   const {
     formData,
     pickupCoords,
-    dropoffCoords,
     isBooking,
     setIsBooking,
     updateField,
+    updateSenderField,
     clearPickup,
-    clearDropoff,
     setPickupLocation,
-    setDropoffLocation,
+    addDeliveryLocation,
+    removeDeliveryLocation,
+    updateDeliveryLocation,
+    clearDeliveryLocation,
+    updateDeliveryRecipient,
     resetUrgency,
     clearAllStates,
   } = useBookingForm();
@@ -66,13 +75,14 @@ export default function BookLogisticsScreen() {
   const { slideAnim, fadeAnim, animatePriceAppearance } =
     useBookingAnimations();
 
-  const { calculatedPrice, isCalculating } = usePriceCalculation(
-    pickupCoords,
-    dropoffCoords,
-    formData.isUrgent,
-    formData.urgencyFee,
-    animatePriceAppearance
-  );
+  const { calculatedPrice, priceBreakdown, isCalculating } =
+    usePriceCalculation(
+      pickupCoords,
+      formData.deliveryLocations,
+      formData.isUrgent,
+      formData.urgencyFee,
+      animatePriceAppearance
+    );
 
   const {
     showUrgencyModal,
@@ -86,17 +96,26 @@ export default function BookLogisticsScreen() {
     resetUrgencyInputs,
   } = useUrgencyModal(calculatedPrice);
 
-  const defaultAddress = ((user as any)?.usersAddress ?? null) as {
-    name?: string;
-    lat?: number;
-    lon?: number;
-  } | null;
+  // Address book & 'use my info' logic extracted to a hook for clarity
+  const {
+    addressBook,
+    isLoadingAddressBook,
+    useSenderMyInfo,
+    handleUseSenderMyInfo,
+    handleSelectSenderFromAddressBook,
+    handleSearchAddressBook,
+  } = useBookOrder({
+    user,
+    updateSenderField,
+    updateRecipientField: (field, value) => {
+      // Not used anymore, but hook still expects it
+    },
+    isFocused,
+  });
 
-  // Clear all states on unmount
+  // Clear booking flag on unmount
   useEffect(() => {
-    return () => {
-      setIsBooking(false);
-    };
+    return () => setIsBooking(false);
   }, [setIsBooking]);
 
   // Handle location selection from search screen
@@ -109,14 +128,30 @@ export default function BookLogisticsScreen() {
         ? { lat: (selected as any).lat, lon: (selected as any).lon }
         : null;
 
-    if ((selected as any).context === "pickup" && coords) {
+    const context = (selected as any).context as string;
+
+    if (context === "pickup" && coords) {
       setPickupLocation(text, coords);
-    } else if ((selected as any).context === "dropoff" && coords) {
-      setDropoffLocation(text, coords);
+    } else if (context?.startsWith("delivery-") && coords) {
+      const index = parseInt(context.split("-")[1], 10);
+      if (
+        !isNaN(index) &&
+        index >= 0 &&
+        index < formData.deliveryLocations.length
+      ) {
+        updateDeliveryLocation(index, text, coords);
+      }
     }
 
     dispatch(clearSelectedLocation());
-  }, [dispatch, isFocused, selected, setPickupLocation, setDropoffLocation]);
+  }, [
+    dispatch,
+    isFocused,
+    selected,
+    setPickupLocation,
+    updateDeliveryLocation,
+    formData.deliveryLocations.length,
+  ]);
 
   const handleClearPickup = useCallback(() => {
     clearPickup();
@@ -126,62 +161,57 @@ export default function BookLogisticsScreen() {
     }
   }, [clearPickup, formData.isUrgent, resetUrgency, resetUrgencyInputs]);
 
-  const handleClearDropoff = useCallback(() => {
-    clearDropoff();
-    if (formData.isUrgent) {
-      resetUrgency();
-      resetUrgencyInputs();
-    }
-  }, [clearDropoff, formData.isUrgent, resetUrgency, resetUrgencyInputs]);
+  const handleClearDelivery = useCallback(
+    (index: number) => {
+      clearDeliveryLocation(index);
+      if (formData.isUrgent) {
+        resetUrgency();
+        resetUrgencyInputs();
+      }
+    },
+    [clearDeliveryLocation, formData.isUrgent, resetUrgency, resetUrgencyInputs]
+  );
 
-  const handleUseDefaultAddress = useCallback(
-    (type: LocationContext) => {
-      if (!isValidDefaultAddress(defaultAddress)) {
+  const handleAddDelivery = useCallback(() => {
+    if (formData.deliveryLocations.length >= MAX_DELIVERIES) {
+      Alert.alert(
+        "Maximum Reached",
+        `You can add up to ${MAX_DELIVERIES} delivery locations.`
+      );
+      return;
+    }
+    addDeliveryLocation();
+  }, [formData.deliveryLocations.length, addDeliveryLocation]);
+
+  const handleRemoveDelivery = useCallback(
+    (index: number) => {
+      if (formData.deliveryLocations.length === 1) {
         Alert.alert(
-          "No default address",
-          "Please set your address in Profile first."
+          "Cannot Remove",
+          "You must have at least one delivery location."
         );
         return;
       }
 
-      const defName = defaultAddress.name || "My address";
-      const defCoords = { lat: defaultAddress.lat, lon: defaultAddress.lon };
-
-      if (type === "pickup") {
-        if (
-          coordsEqual(dropoffCoords, defCoords) ||
-          nameEqual(formData.dropOffLocation, defName)
-        ) {
-          Alert.alert(
-            "Invalid selection",
-            "Pickup and drop-off cannot be the same."
-          );
-          return;
-        }
-        setPickupLocation(defName, defCoords);
-      } else {
-        if (
-          coordsEqual(pickupCoords, defCoords) ||
-          nameEqual(formData.pickupLocation, defName)
-        ) {
-          Alert.alert(
-            "Invalid selection",
-            "Pickup and drop-off cannot be the same."
-          );
-          return;
-        }
-        setDropoffLocation(defName, defCoords);
-      }
+      Alert.alert("Remove Delivery", `Remove delivery location ${index + 1}?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => removeDeliveryLocation(index),
+        },
+      ]);
     },
-    [
-      defaultAddress,
-      dropoffCoords,
-      pickupCoords,
-      formData.dropOffLocation,
-      formData.pickupLocation,
-      setPickupLocation,
-      setDropoffLocation,
-    ]
+    [formData.deliveryLocations.length, removeDeliveryLocation]
+  );
+
+  const handleSelectRecipientFromAddressBook = useCallback(
+    (index: number, entry: any) => {
+      updateDeliveryRecipient(index, "name", entry.name);
+      updateDeliveryRecipient(index, "email", entry.email || "");
+      updateDeliveryRecipient(index, "phone", entry.phone);
+    },
+    [updateDeliveryRecipient]
   );
 
   const handleUrgentToggle = useCallback(() => {
@@ -230,15 +260,53 @@ export default function BookLogisticsScreen() {
   ]);
 
   const handleBooking = useCallback(async () => {
-    if (
-      !formData.pickupLocation ||
-      !formData.dropOffLocation ||
-      !pickupCoords ||
-      !dropoffCoords
-    ) {
+    if (!formData.pickupLocation || !pickupCoords) {
       Alert.alert(
         "Missing Information",
-        "Please select both pickup and dropoff locations from the suggestions"
+        "Please select pickup location from the suggestions"
+      );
+      return;
+    }
+
+    // Validate deliveries
+    const validDeliveries = formData.deliveryLocations.filter(
+      (d) => d.address && d.coordinates
+    );
+
+    if (validDeliveries.length === 0) {
+      Alert.alert(
+        "Missing Information",
+        "Please add at least one delivery location"
+      );
+      return;
+    }
+
+    // Check all recipients have required info
+    const incompleteRecipient = formData.deliveryLocations.find(
+      (d) => !d.recipient.name || !d.recipient.phone
+    );
+
+    if (incompleteRecipient) {
+      Alert.alert(
+        "Missing Recipient Information",
+        "Please fill in name and phone number for all recipients"
+      );
+      return;
+    }
+
+    // Check for duplicate recipients
+    if (hasDuplicateRecipients(formData.deliveryLocations)) {
+      Alert.alert(
+        "Duplicate Recipients",
+        "You cannot send to the same recipient twice. Please use unique recipients for each delivery."
+      );
+      return;
+    }
+
+    if (!formData.sender.name || !formData.sender.phone) {
+      Alert.alert(
+        "Missing Sender Information",
+        "Please fill in sender's name and phone number"
       );
       return;
     }
@@ -251,11 +319,13 @@ export default function BookLogisticsScreen() {
       return;
     }
 
-    const vehicle = "bike";
+    const deliveryCount = validDeliveries.length;
+    const deliveryText =
+      deliveryCount === 1 ? "1 delivery" : `${deliveryCount} deliveries`;
 
     Alert.alert(
       "Confirm Booking",
-      `Book ${vehicle} for ₦${calculatedPrice.toLocaleString()}?`,
+      `Book ${deliveryText} for ₦${calculatedPrice.toLocaleString()}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -263,26 +333,28 @@ export default function BookLogisticsScreen() {
           onPress: async () => {
             setIsBooking(true);
             try {
-              const res = await orderService.create(
-                {
-                  startLat: pickupCoords.lat,
-                  startLon: pickupCoords.lon,
-                  endLat: dropoffCoords.lat,
-                  endLon: dropoffCoords.lon,
-                  vehicleType: vehicle,
-                  isUrgent: formData.isUrgent,
-                  urgencyFee: formData.isUrgent
-                    ? formData.urgencyFee
-                    : undefined,
+              const res = await orderService.createMultipleDelivery({
+                sender: {
+                  name: formData.sender.name,
+                  email: formData.sender.email,
+                  phone: formData.sender.phone,
                 },
-                {
-                  dropOffLocation: formData.dropOffLocation,
-                  pickUpLocation: formData.pickupLocation,
-                  userOrderRole: (send_type ?? "sender") as string,
-                  vehicleType: vehicle,
-                  noteForRider: formData.noteForRider || null,
-                }
-              );
+                pickUpAddress: formData.pickupLocation,
+                pickUpCoordinates: [pickupCoords.lon, pickupCoords.lat],
+                deliveryLocations: validDeliveries.map((d) => ({
+                  address: d.address,
+                  coordinates: [d.coordinates!.lon, d.coordinates!.lat],
+                  recipient: {
+                    name: d.recipient.name,
+                    email: d.recipient.email,
+                    phone: d.recipient.phone,
+                  },
+                })),
+                userOrderRole: (send_type ?? "sender") as string,
+                noteForRider: formData.noteForRider || null,
+                isUrgent: formData.isUrgent,
+                urgencyFee: formData.isUrgent ? formData.urgencyFee : undefined,
+              });
 
               if (res?.success) {
                 Alert.alert("Success", "Order created successfully", [
@@ -342,7 +414,6 @@ export default function BookLogisticsScreen() {
   }, [
     formData,
     pickupCoords,
-    dropoffCoords,
     calculatedPrice,
     send_type,
     setIsBooking,
@@ -351,16 +422,17 @@ export default function BookLogisticsScreen() {
 
   const isSubmitDisabled = !canSubmitBooking(
     formData.pickupLocation,
-    formData.dropOffLocation,
     pickupCoords,
-    dropoffCoords,
+    formData.deliveryLocations,
     calculatedPrice,
     isCalculating,
-    isBooking
+    isBooking,
+    formData.sender
   );
 
   const isUrgentDisabled =
-    !formData.pickupLocation || !formData.dropOffLocation;
+    !formData.pickupLocation ||
+    !formData.deliveryLocations.some((d) => d.address && d.coordinates);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -389,13 +461,139 @@ export default function BookLogisticsScreen() {
             },
           ]}
         >
-          <LocationInputSection
-            pickupLocation={formData.pickupLocation}
-            dropoffLocation={formData.dropOffLocation}
-            defaultAddress={defaultAddress}
-            onClearPickup={handleClearPickup}
-            onClearDropoff={handleClearDropoff}
-            onUseDefaultAddress={handleUseDefaultAddress}
+          {/* Pickup Location */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📍 Pickup Location</Text>
+            <View style={styles.locationInputContainer}>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.locationInput}
+                  value={formData.pickupLocation}
+                  onFocus={() =>
+                    router.push({
+                      pathname: "/location-search",
+                      params: { context: "pickup" },
+                    })
+                  }
+                  showSoftInputOnFocus={false}
+                  placeholder="Select pickup location"
+                  placeholderTextColor="#999"
+                />
+                {formData.pickupLocation && (
+                  <TouchableOpacity
+                    onPress={handleClearPickup}
+                    style={styles.clearButton}
+                  >
+                    <MaterialIcons name="close" size={rs(18)} color="#666" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* Delivery Locations */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🚚 Delivery Locations</Text>
+              <Text style={styles.deliveryCount}>
+                {formData.deliveryLocations.length} / {MAX_DELIVERIES}
+              </Text>
+            </View>
+
+            {formData.deliveryLocations.map((delivery, index) => (
+              <View key={index} style={styles.deliveryCard}>
+                <View style={styles.deliveryHeader}>
+                  <Text style={styles.deliveryNumber}>
+                    Delivery {index + 1}
+                  </Text>
+                  {formData.deliveryLocations.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveDelivery(index)}
+                      style={styles.removeButton}
+                    >
+                      <MaterialIcons
+                        name="close"
+                        size={rs(20)}
+                        color="#ff4444"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Location Input */}
+                <View style={styles.locationInputContainer}>
+                  <Text style={styles.inputLabel}>Drop-off Address</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.locationInput}
+                      value={delivery.address}
+                      onFocus={() =>
+                        router.push({
+                          pathname: "/location-search",
+                          params: { context: `delivery-${index}` },
+                        })
+                      }
+                      showSoftInputOnFocus={false}
+                      placeholder="Select drop-off location"
+                      placeholderTextColor="#999"
+                    />
+                    {delivery.address && (
+                      <TouchableOpacity
+                        onPress={() => handleClearDelivery(index)}
+                        style={styles.clearButton}
+                      >
+                        <MaterialIcons
+                          name="close"
+                          size={rs(18)}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Recipient Info */}
+                <DeliveryRecipientSection
+                  deliveryIndex={index}
+                  recipient={delivery.recipient}
+                  onUpdateField={updateDeliveryRecipient}
+                  addressBook={addressBook}
+                  isLoadingAddressBook={isLoadingAddressBook}
+                  onSearchAddressBook={handleSearchAddressBook}
+                  onSelectFromAddressBook={handleSelectRecipientFromAddressBook}
+                />
+              </View>
+            ))}
+
+            {/* Add Delivery Button */}
+            {formData.deliveryLocations.length < MAX_DELIVERIES && (
+              <TouchableOpacity
+                onPress={handleAddDelivery}
+                style={styles.addButton}
+              >
+                <MaterialIcons
+                  name="add-circle"
+                  size={rs(24)}
+                  color="#007AFF"
+                />
+                <Text style={styles.addButtonText}>Add Another Delivery</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Sender Information */}
+          <ContactInfoSection
+            title="Sender Information"
+            contactInfo={formData.sender}
+            onUpdateField={updateSenderField}
+            onUseMyInfo={handleUseSenderMyInfo}
+            onSelectFromAddressBook={handleSelectSenderFromAddressBook}
+            onSearchAddressBook={handleSearchAddressBook}
+            canUseMyInfo={true}
+            useMyInfoChecked={useSenderMyInfo}
+            addressBookEntries={addressBook}
+            isLoadingAddressBook={isLoadingAddressBook}
+            role="sender"
           />
 
           <UrgentToggle
@@ -414,6 +612,7 @@ export default function BookLogisticsScreen() {
 
       <PriceFooter
         calculatedPrice={calculatedPrice}
+        priceBreakdown={priceBreakdown}
         isCalculating={isCalculating}
         isBooking={isBooking}
         disabled={isSubmitDisabled}
@@ -463,5 +662,94 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     paddingBottom: rs(20),
+  },
+  section: {
+    marginBottom: rs(20),
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: rs(12),
+  },
+  sectionTitle: {
+    fontSize: rs(18),
+    fontWeight: "bold",
+    color: "#000",
+    marginBottom: rs(12),
+  },
+  deliveryCount: {
+    fontSize: rs(14),
+    color: "#666",
+    fontWeight: "600",
+  },
+  locationInputContainer: {
+    marginBottom: rs(12),
+  },
+  inputWrapper: {
+    position: "relative",
+  },
+  locationInput: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: rs(10),
+    paddingHorizontal: rs(16),
+    paddingVertical: rs(14),
+    fontSize: rs(15),
+    color: "#000",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    paddingRight: rs(45),
+  },
+  clearButton: {
+    position: "absolute",
+    right: rs(12),
+    top: "50%",
+    transform: [{ translateY: -rs(9) }],
+    padding: rs(4),
+  },
+  deliveryCard: {
+    backgroundColor: "#fff",
+    borderRadius: rs(12),
+    padding: rs(16),
+    marginBottom: rs(12),
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  deliveryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: rs(12),
+  },
+  deliveryNumber: {
+    fontSize: rs(16),
+    fontWeight: "bold",
+    color: "#007AFF",
+  },
+  removeButton: {
+    padding: rs(4),
+  },
+  inputLabel: {
+    fontSize: rs(14),
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: rs(8),
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderRadius: rs(12),
+    padding: rs(16),
+    borderWidth: 2,
+    borderColor: "#007AFF",
+    borderStyle: "dashed",
+  },
+  addButtonText: {
+    fontSize: rs(16),
+    fontWeight: "600",
+    color: "#007AFF",
+    marginLeft: rs(8),
   },
 });
