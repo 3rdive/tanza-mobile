@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -39,7 +40,10 @@ export default function FundAccountScreen() {
           saveVirtualAccount(resp.data as IVirtualAccount);
         }
       } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || "Failed to load virtual account";
+        const msg =
+          e?.response?.data?.message ||
+          e?.message ||
+          "Failed to load virtual account";
         Alert.alert("Error", msg);
       } finally {
         setLoading(false);
@@ -81,7 +85,11 @@ export default function FundAccountScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backArrow}>←</Text>
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={rs(24)}
+              color="#000"
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Fund Account</Text>
           <View style={styles.placeholder} />
@@ -96,7 +104,11 @@ export default function FundAccountScreen() {
           <View style={styles.paymentOption}>
             <View style={styles.optionHeader}>
               <View style={styles.optionIconContainer}>
-                <Text style={styles.optionIcon}>🏦</Text>
+                <MaterialCommunityIcons
+                  name="bank"
+                  size={rs(24)}
+                  color="#00B624"
+                />
               </View>
               <View style={styles.optionInfo}>
                 <Text style={styles.optionTitle}>Bank Transfer</Text>
@@ -127,7 +139,9 @@ export default function FundAccountScreen() {
                     <View style={styles.accountValueContainer}>
                       <Text style={styles.accountValue}>{accountNumber}</Text>
                       <TouchableOpacity
-                        onPress={() => copyToClipboard(accountNumber, "Account number")}
+                        onPress={() =>
+                          copyToClipboard(accountNumber, "Account number")
+                        }
                         style={styles.copyButton}
                       >
                         <Text style={styles.copyText}>Copy</Text>
@@ -152,17 +166,22 @@ export default function FundAccountScreen() {
                     <Text style={styles.accountLabel}>Account Name</Text>
                     <Text style={styles.accountValue}>{accountName}</Text>
                   </View>
-
-
                 </>
               )}
 
               <View style={styles.noteContainer}>
-                <Text style={styles.noteText}>
-                  💡 This is your dedicated account. Any transfer to this
-                  account will be automatically added to your wallet. It may
-                  take up to 3Mins to process.
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-on-outline"
+                    size={rs(18)}
+                    color="#00B624"
+                  />
+                  <Text style={[styles.noteText, { marginLeft: rs(8) }]}>
+                    This is your dedicated account. Any transfer to this account
+                    will be automatically added to your wallet. It may take up
+                    to 3Mins to process.
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -170,7 +189,16 @@ export default function FundAccountScreen() {
           <PaystackButton />
           {/* Security Note */}
           <View style={styles.securityNote}>
-            <Text style={styles.securityTitle}>🔒 Secure & Protected</Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="lock"
+                size={rs(18)}
+                color="#00B624"
+              />
+              <Text style={[styles.securityTitle, { marginLeft: rs(8) }]}>
+                Secure & Protected
+              </Text>
+            </View>
             <Text style={styles.securityText}>
               All transactions are encrypted and protected by bank-level
               security. Your financial information is never stored on our

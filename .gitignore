@@ -37,6 +37,7 @@ yarn-error.*
 *.tsbuildinfo
 .env
 
+google-services.json
 app-example
 /android
 /ios

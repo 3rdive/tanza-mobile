@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82; // downscale globally
@@ -101,7 +102,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
         const mapped = mapApiToUI(apiItems);
         setHasMore(
           ((resp as any)?.pagination?.page || pageToLoad) <
-            ((resp as any)?.pagination?.totalPages || 0)
+            ((resp as any)?.pagination?.totalPages || 0),
         );
         setPage(pageToLoad);
         setTransactions((prev) => (append ? [...prev, ...mapped] : mapped));
@@ -109,7 +110,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
         console.warn("Failed to load transactions", e);
       }
     },
-    [filter, mapApiToUI]
+    [filter, mapApiToUI],
   );
 
   useEffect(() => {
@@ -130,21 +131,45 @@ export default function TransactionHistoryScreen(): JSX.Element {
   }, [fetchPage]);
 
   const filterTransactions = (
-    transactionList: Transaction[]
+    transactionList: Transaction[],
   ): Transaction[] => {
     return transactionList; // server-side filtered
   };
 
-  const getTransactionIcon = (type: TransactionType): string => {
+  const getTransactionIcon = (type: TransactionType): JSX.Element => {
     switch (type) {
       case "send":
-        return "📤";
+        return (
+          <MaterialCommunityIcons
+            name="tray-arrow-up"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
       case "receive":
-        return "📥";
+        return (
+          <MaterialCommunityIcons
+            name="tray-arrow-down"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
       case "fund":
-        return "💰";
+        return (
+          <MaterialCommunityIcons
+            name="currency-ngn"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
       default:
-        return "💳";
+        return (
+          <MaterialCommunityIcons
+            name="credit-card"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
     }
   };
 
@@ -231,7 +256,11 @@ export default function TransactionHistoryScreen(): JSX.Element {
           {transaction.amount > 0 ? "+" : ""}₦
           {Math.abs(transaction.amount).toLocaleString()}
         </Text>
-        <Text style={styles.chevron}>›</Text>
+        <MaterialCommunityIcons
+          name="chevron-right"
+          size={rs(16)}
+          color="#ccc"
+        />
       </View>
     </TouchableOpacity>
   );
@@ -270,7 +299,11 @@ export default function TransactionHistoryScreen(): JSX.Element {
 
   const renderEmpty = (): JSX.Element => (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyStateIcon}>📋</Text>
+      <MaterialCommunityIcons
+        name="clipboard-text"
+        size={rs(48)}
+        color={tzColors.primary}
+      />
       <Text style={styles.emptyStateText}>No transactions found</Text>
       <Text style={styles.emptyStateSubtext}>
         {filter === "all"

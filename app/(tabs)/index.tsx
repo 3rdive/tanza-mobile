@@ -26,6 +26,8 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { tzColors } from "@/theme/color";
 const UI_SCALE = 0.82; // globally downscale sizes ~18%
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
@@ -51,7 +53,6 @@ export default function HomeScreen() {
   } | null>(null);
   const {
     tasks,
-    loading: tasksLoading,
     completeTask,
     cancelTask,
     refetch: refetchTasks,
@@ -60,7 +61,7 @@ export default function HomeScreen() {
   // Socket.IO integration for real-time task updates
   useSocketTasks({
     onNewTask: (newTask) => {
-      console.log("📦 New task received via socket:", newTask);
+      console.log("New task received via socket:", newTask);
       // Refresh tasks to include the new one
       refetchTasks();
     },
@@ -94,8 +95,8 @@ export default function HomeScreen() {
             upperType === "DEPOSIT"
               ? "fund"
               : upperType === "WITHDRAWAL" || upperType === "ORDER"
-              ? "send"
-              : "receive";
+                ? "send"
+                : "receive";
           const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Package Sent";
           const created = new Date(t.createdAt);
           const dateStr = !isNaN(created.getTime())
@@ -141,22 +142,25 @@ export default function HomeScreen() {
       .catch((error) => {
         console.error(error);
       });
-  }, []);
+    
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [access_token]);
 
   useEffect(() => {
     StorageMechanics.set(
       StorageKeys.HAS_ONBOARDING_COMPLETED,
-      StorageKeys.HAS_ONBOARDING_COMPLETED
+      StorageKeys.HAS_ONBOARDING_COMPLETED,
     );
 
     load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (tasks.length > 0) {
       // Find the first review_request task
       const reviewTask = tasks.find(
-        (task) => task.category === "request_review"
+        (task) => task.category === "request_review",
       );
 
       if (reviewTask) {
@@ -185,13 +189,37 @@ export default function HomeScreen() {
   const getTransactionIcon = (type: any) => {
     switch (type) {
       case "send":
-        return "📤";
+        return (
+          <MaterialCommunityIcons
+            name="tray-arrow-up"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
       case "receive":
-        return "📥";
+        return (
+          <MaterialCommunityIcons
+            name="tray-arrow-down"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
       case "fund":
-        return "💰";
+        return (
+          <MaterialCommunityIcons
+            name="currency-ngn"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
       default:
-        return "💳";
+        return (
+          <MaterialCommunityIcons
+            name="credit-card"
+            size={rs(18)}
+            color={tzColors.primary}
+          />
+        );
     }
   };
 
@@ -323,7 +351,7 @@ export default function HomeScreen() {
       console.error("Error submitting review:", error);
       Alert.alert(
         "Error",
-        error?.message || "Failed to submit review. Please try again."
+        error?.message || "Failed to submit review. Please try again.",
       );
     }
   };
@@ -345,13 +373,16 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.userInfo}>
             <Text style={styles.greeting} allowFontScaling={false}>
-              Good morning
+              Hello,
             </Text>
             <Text style={styles.userName} allowFontScaling={false}>
               {userName}
             </Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => router.push("/(tabs)/profile")}
+          >
             {Boolean((user as any)?.profilePic) ? (
               <Image
                 source={{ uri: (user as any)?.profilePic as string }}
@@ -359,9 +390,11 @@ export default function HomeScreen() {
                 contentFit="cover"
               />
             ) : (
-              <Text style={styles.profileIcon} allowFontScaling={false}>
-                👤
-              </Text>
+              <MaterialCommunityIcons
+                name="account"
+                size={rs(20)}
+                color="#fff"
+              />
             )}
           </TouchableOpacity>
         </View>
@@ -401,9 +434,11 @@ export default function HomeScreen() {
             }
           >
             <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon} allowFontScaling={false}>
-                📦
-              </Text>
+              <MaterialCommunityIcons
+                name="package-variant"
+                size={rs(24)}
+                color={tzColors.primary}
+              />
             </View>
             <Text style={styles.actionText} allowFontScaling={false}>
               Send Package
@@ -420,9 +455,11 @@ export default function HomeScreen() {
             }
           >
             <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon} allowFontScaling={false}>
-                📥
-              </Text>
+              <MaterialCommunityIcons
+                name="tray-arrow-down"
+                size={rs(24)}
+                color={tzColors.primary}
+              />
             </View>
             <Text style={styles.actionText} allowFontScaling={false}>
               Receive Package
@@ -488,9 +525,11 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon} allowFontScaling={false}>
-                📋
-              </Text>
+              <MaterialCommunityIcons
+                name="clipboard-text"
+                size={rs(48)}
+                color={tzColors.primary}
+              />
               <Text style={styles.emptyStateText} allowFontScaling={false}>
                 No recent transactions
               </Text>

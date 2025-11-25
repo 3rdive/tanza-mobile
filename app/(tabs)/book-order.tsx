@@ -22,7 +22,7 @@ import {
   canSubmitBooking,
   hasDuplicateRecipients,
 } from "@/utils/booking.utils";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect } from "react";
@@ -461,40 +461,70 @@ export default function BookLogisticsScreen() {
             },
           ]}
         >
-          {/* Pickup Location */}
+          {/* Pickup Information */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📍 Pickup Location</Text>
-            <View style={styles.locationInputContainer}>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.locationInput}
-                  value={formData.pickupLocation}
-                  onFocus={() =>
-                    router.push({
-                      pathname: "/location-search",
-                      params: { context: "pickup" },
-                    })
-                  }
-                  showSoftInputOnFocus={false}
-                  placeholder="Select pickup location"
-                  placeholderTextColor="#999"
-                />
-                {formData.pickupLocation && (
-                  <TouchableOpacity
-                    onPress={handleClearPickup}
-                    style={styles.clearButton}
-                  >
-                    <MaterialIcons name="close" size={rs(18)} color="#666" />
-                  </TouchableOpacity>
-                )}
+            <Text style={styles.sectionTitle}>
+              <MaterialCommunityIcons
+                name="map-marker"
+                size={rs(18)}
+                color="#00B624"
+              />{" "}
+              Pickup Information
+            </Text>
+            <View style={styles.pickupCard}>
+              <View style={styles.locationInputContainer}>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.locationInput}
+                    value={formData.pickupLocation}
+                    onFocus={() =>
+                      router.push({
+                        pathname: "/location-search",
+                        params: { context: "pickup" },
+                      })
+                    }
+                    showSoftInputOnFocus={false}
+                    placeholder="Select pickup location"
+                    placeholderTextColor="#999"
+                  />
+                  {formData.pickupLocation && (
+                    <TouchableOpacity
+                      onPress={handleClearPickup}
+                      style={styles.clearButton}
+                    >
+                      <MaterialIcons name="close" size={rs(18)} color="#666" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
+
+              <ContactInfoSection
+                title="Sender Information"
+                contactInfo={formData.sender}
+                onUpdateField={updateSenderField}
+                onUseMyInfo={handleUseSenderMyInfo}
+                onSelectFromAddressBook={handleSelectSenderFromAddressBook}
+                onSearchAddressBook={handleSearchAddressBook}
+                canUseMyInfo={true}
+                useMyInfoChecked={useSenderMyInfo}
+                addressBookEntries={addressBook}
+                isLoadingAddressBook={isLoadingAddressBook}
+                role="sender"
+              />
             </View>
           </View>
 
           {/* Delivery Locations */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>🚚 Delivery Locations</Text>
+              <Text style={styles.sectionTitle}>
+                <MaterialCommunityIcons
+                  name="truck-delivery"
+                  size={rs(18)}
+                  color="#00B624"
+                />{" "}
+                Delivery Locations
+              </Text>
               <Text style={styles.deliveryCount}>
                 {formData.deliveryLocations.length} / {MAX_DELIVERIES}
               </Text>
@@ -580,21 +610,6 @@ export default function BookLogisticsScreen() {
               </TouchableOpacity>
             )}
           </View>
-
-          {/* Sender Information */}
-          <ContactInfoSection
-            title="Sender Information"
-            contactInfo={formData.sender}
-            onUpdateField={updateSenderField}
-            onUseMyInfo={handleUseSenderMyInfo}
-            onSelectFromAddressBook={handleSelectSenderFromAddressBook}
-            onSearchAddressBook={handleSearchAddressBook}
-            canUseMyInfo={true}
-            useMyInfoChecked={useSenderMyInfo}
-            addressBookEntries={addressBook}
-            isLoadingAddressBook={isLoadingAddressBook}
-            role="sender"
-          />
 
           <UrgentToggle
             isUrgent={formData.isUrgent}
@@ -708,6 +723,14 @@ const styles = StyleSheet.create({
     padding: rs(4),
   },
   deliveryCard: {
+    backgroundColor: "#fff",
+    borderRadius: rs(12),
+    padding: rs(16),
+    marginBottom: rs(12),
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  pickupCard: {
     backgroundColor: "#fff",
     borderRadius: rs(12),
     padding: rs(16),

@@ -1,7 +1,11 @@
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { usePushNotification } from "@/hooks/notifications.hook";
 
 export default function TabLayout() {
+  const { expoPushToken } = usePushNotification();
+
+  console.log("expo-token: ", expoPushToken);
   return (
     <Tabs
       screenOptions={{ tabBarActiveTintColor: "#00B624", headerShown: false }}

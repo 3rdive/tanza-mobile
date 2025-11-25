@@ -1,4 +1,4 @@
-import ProgressTracker from "@/components/transaction/order-tracking";
+import DeliveryProgress from "@/components/transaction/delivery-progress";
 import {
   transactionService,
   userService,
@@ -6,6 +6,7 @@ import {
   type IUser,
 } from "@/lib/api";
 import { tzColors } from "@/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { JSX, useEffect, useState } from "react";
 import {
@@ -97,7 +98,12 @@ export default function TransactionDetail(): JSX.Element {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backArrow}>←</Text>
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={rs(24)}
+              color="#000"
+              style={styles.backArrow}
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Transaction Details</Text>
           <View style={styles.placeholder} />
@@ -118,7 +124,12 @@ export default function TransactionDetail(): JSX.Element {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backArrow}>←</Text>
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={rs(24)}
+              color="#000"
+              style={styles.backArrow}
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Transaction Details</Text>
           <View style={styles.placeholder} />
@@ -162,7 +173,12 @@ export default function TransactionDetail(): JSX.Element {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backArrow}>←</Text>
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={rs(24)}
+            color="#000"
+            style={styles.backArrow}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Transaction Details</Text>
         <View style={styles.placeholder} />
@@ -173,7 +189,11 @@ export default function TransactionDetail(): JSX.Element {
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <View style={styles.transactionIconContainer}>
-              <Text style={styles.transactionIcon}>💳</Text>
+              <MaterialCommunityIcons
+                name="credit-card"
+                size={rs(18)}
+                color="#000"
+              />
             </View>
             <View style={styles.summaryInfo}>
               <Text style={styles.summaryTitle}>{apiTx.type}</Text>
@@ -224,9 +244,25 @@ export default function TransactionDetail(): JSX.Element {
           </View>
         </View>
 
-        {apiTx?.order?.orderTracking && (
-          <ProgressTracker trackingData={apiTx?.order?.orderTracking as any} />
-        )}
+        {apiTx?.order?.orderTracking &&
+          (() => {
+            const tracking = (apiTx?.order as any)?.orderTracking as
+              | { status: string; createdAt: string }[]
+              | undefined;
+            let derived = "";
+            if (tracking && tracking.length > 0) {
+              // Use the most recent tracking status by createdAt
+              const last = tracking.reduce((a, b) =>
+                new Date(a.createdAt) > new Date(b.createdAt) ? a : b
+              );
+              derived = String(last.status);
+            } else if ((apiTx as any)?.order?.orderStatus) {
+              derived = String((apiTx as any).order.orderStatus);
+            } else if (apiTx.status) {
+              derived = String(apiTx.status);
+            }
+            return <DeliveryProgress currentStatus={derived} />;
+          })()}
 
         {/* Transaction Info */}
         <View style={styles.detailsCard}>
@@ -269,14 +305,19 @@ export default function TransactionDetail(): JSX.Element {
                   ""}
               </Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Drop-off</Text>
-              <Text style={styles.detailValue}>
-                {(order as any)?.dropOffLocation?.address ||
-                  (order as any)?.dropOffLocation ||
-                  ""}
-              </Text>
-            </View>
+
+            {/* Show drop-off only if not multi-delivery */}
+            {!order.hasMultipleDeliveries && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Drop-off</Text>
+                <Text style={styles.detailValue}>
+                  {(order as any)?.dropOffLocation?.address ||
+                    (order as any)?.dropOffLocation ||
+                    ""}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Vehicle</Text>
               <Text style={styles.detailValue}>{order.vehicleType}</Text>
@@ -316,16 +357,108 @@ export default function TransactionDetail(): JSX.Element {
                 <Text style={styles.detailValue}>{contactSenderPhone}</Text>
               </View>
             ) : null}
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Recipient</Text>
-              <Text style={styles.detailValue}>{contactRecipientName}</Text>
-            </View>
-            {contactRecipientPhone ? (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Recipient Phone</Text>
-                <Text style={styles.detailValue}>{contactRecipientPhone}</Text>
+
+            {/* Show single recipient only if not multi-delivery */}
+            {!order.hasMultipleDeliveries && (
+              <>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Recipient</Text>
+                  <Text style={styles.detailValue}>{contactRecipientName}</Text>
+                </View>
+                {contactRecipientPhone ? (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Recipient Phone</Text>
+                    <Text style={styles.detailValue}>
+                      {contactRecipientPhone}
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Multi-Delivery Destinations */}
+        {order && order.hasMultipleDeliveries && order.deliveryDestinations && (
+          <View style={styles.detailsCard}>
+            <Text style={styles.sectionTitle}>
+              Delivery Destinations ({order.deliveryDestinations.length})
+            </Text>
+            {order.deliveryDestinations.map((destination, index) => (
+              <View key={destination.id}>
+                {index > 0 && <View style={styles.separator} />}
+                <View style={styles.destinationContainer}>
+                  <View style={styles.destinationHeader}>
+                    <Text style={styles.destinationNumber}>
+                      Stop {index + 1}
+                    </Text>
+                    {destination.delivered && (
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: "#22c55e" },
+                        ]}
+                      >
+                        <Text style={styles.statusText}>Delivered</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Address</Text>
+                    <Text style={styles.detailValue}>
+                      {destination.dropOffLocation?.address || ""}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Recipient</Text>
+                    <Text style={styles.detailValue}>
+                      {destination.recipient?.name || ""}
+                    </Text>
+                  </View>
+
+                  {destination.recipient?.phone && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Phone</Text>
+                      <Text style={styles.detailValue}>
+                        {destination.recipient.phone}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Distance</Text>
+                    <Text style={styles.detailValue}>
+                      {destination.distanceFromPickupKm.toFixed(2)} km
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Duration</Text>
+                    <Text style={styles.detailValue}>
+                      {destination.durationFromPickup}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Delivery Fee</Text>
+                    <Text style={styles.detailValue}>
+                      ₦{Number(destination.deliveryFee || 0).toLocaleString()}
+                    </Text>
+                  </View>
+
+                  {destination.deliveredAt && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Delivered At</Text>
+                      <Text style={styles.detailValue}>
+                        {new Date(destination.deliveredAt).toLocaleString()}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
-            ) : null}
+            ))}
           </View>
         )}
       </ScrollView>
@@ -632,7 +765,21 @@ const styles = StyleSheet.create({
   },
   timelineTime: {
     fontSize: rs(12),
-    color: "#6b7280",
+    color: "#999",
     marginTop: rs(2),
+  },
+  destinationContainer: {
+    marginVertical: rs(8),
+  },
+  destinationHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: rs(12),
+  },
+  destinationNumber: {
+    fontSize: rs(16),
+    fontWeight: "600",
+    color: "#000",
   },
 });

@@ -86,4 +86,7 @@ export interface CreateOrderParams {
   userOrderRole: string;
 }
 
-export type LocationContext = "pickup" | `delivery-${number}`;
+/**
+ * Allow 'dropoff' as a valid context in addition to 'pickup' and delivery-N entries.
+ */
+export type LocationContext = "pickup" | "dropoff" | `delivery-${number}`;

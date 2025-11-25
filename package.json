@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start -c --port 8084",
-    "start:17": "npx expo run:ios --device \"062C8C26-9A44-4F1A-A1E9-5C7DEBBF2DE6\" --port 8084",
+    "start:17": "npx expo run:ios --device \"3564BD16-3F71-4298-8D33-9D0536DB6525\" --port 8084",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -52,7 +52,9 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "react-redux": "^9.2.0",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "expo-notifications": "~0.31.4",
+    "expo-device": "~7.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

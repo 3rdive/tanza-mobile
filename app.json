@@ -21,7 +21,8 @@
         "backgroundColor": "#FFF"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.thirdive.tanza"
+      "package": "com.thirdive.tanza",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
