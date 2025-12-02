@@ -1,5 +1,6 @@
+import { ticketService } from "@/lib/api";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,23 +13,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import * as Linking from "expo-linking";
 
 export default function HelpSupportScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const supportEmail = useMemo(() => {
-    const env = (process as any)?.env || {};
-    return env.EXPO_PUBLIC_APP_EMAIL || "";
-  }, []);
-
   const onSubmit = async () => {
-    if (!supportEmail) {
-      Alert.alert("Unavailable", "Support email is not configured.");
-      return;
-    }
     if (!title.trim() || !description.trim()) {
       Alert.alert("Missing info", "Please provide a title and a description.");
       return;
@@ -36,17 +27,25 @@ export default function HelpSupportScreen() {
 
     setSubmitting(true);
     try {
-      const subject = encodeURIComponent(`[Tanza Support] ${title.trim()}`);
-      const body = encodeURIComponent(description.trim());
-      const url = `mailto:${supportEmail}?subject=${subject}&body=${body}`;
-      const can = await Linking.canOpenURL(url);
-      if (can) {
-        await Linking.openURL(url);
+      const response = await ticketService.createTicket({
+        title: title.trim(),
+        description: description.trim(),
+      });
+      if (response.success) {
+        Alert.alert(
+          "Success",
+          "Your support ticket has been submitted successfully."
+        );
+        setTitle("");
+        setDescription("");
       } else {
-        Alert.alert("Error", "No email app available on this device.");
+        Alert.alert("Error", response.message || "Failed to submit ticket.");
       }
-    } catch (e) {
-      Alert.alert("Error", "Failed to open email composer.");
+    } catch (error: any) {
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to submit ticket. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -55,7 +54,10 @@ export default function HelpSupportScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help & Support</Text>
@@ -66,11 +68,14 @@ export default function HelpSupportScreen() {
         behavior={Platform.select({ ios: "padding", android: undefined })}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.subtitle}>Send us a message</Text>
           <Text style={styles.helperText}>
-            Fill the form below and we will reach you via email. Your email app will open to send
-            the message to our support team.
+            Fill the form below and we will reach you via email. Your email app
+            will open to send the message to our support team.
           </Text>
 
           <View style={styles.formGroup}>
@@ -101,14 +106,16 @@ export default function HelpSupportScreen() {
           <TouchableOpacity
             onPress={onSubmit}
             disabled={submitting || !title.trim() || !description.trim()}
-            style={[styles.button, (submitting || !title.trim() || !description.trim()) && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (submitting || !title.trim() || !description.trim()) &&
+                styles.buttonDisabled,
+            ]}
           >
-            <Text style={styles.buttonText}>{submitting ? "Opening…" : "Send Email"}</Text>
+            <Text style={styles.buttonText}>
+              {submitting ? "Submitting…" : "Submit Ticket"}
+            </Text>
           </TouchableOpacity>
-
-          {!supportEmail ? (
-            <Text style={styles.warning}>Support email is not configured. Set EXPO_PUBLIC_APP_EMAIL in .env</Text>
-          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -127,7 +134,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#e5e7eb",
   },
-  backButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   backArrow: { fontSize: 20 },
   headerTitle: { fontSize: 18, fontWeight: "600" },
   content: { padding: 16 },
@@ -153,5 +165,4 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: "#ffffff", fontWeight: "600" },
-  warning: { color: "#b45309", marginTop: 12 },
 });

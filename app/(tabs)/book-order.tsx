@@ -282,15 +282,30 @@ export default function BookLogisticsScreen() {
     }
 
     // Check all recipients have required info
-    const incompleteRecipient = formData.deliveryLocations.find(
-      (d) => !d.recipient.name || !d.recipient.phone
-    );
+    const incompleteRecipient = formData.deliveryLocations.find((d) => {
+      if (formData.deliveryLocations.length === 1) {
+        // For single delivery, only address is required
+        return !d.address || !d.coordinates;
+      } else {
+        // For multiple deliveries, name and phone are required
+        return (
+          !d.recipient.name ||
+          !d.recipient.phone ||
+          !d.address ||
+          !d.coordinates
+        );
+      }
+    });
 
     if (incompleteRecipient) {
-      Alert.alert(
-        "Missing Recipient Information",
-        "Please fill in name and phone number for all recipients"
-      );
+      if (formData.deliveryLocations.length === 1) {
+        Alert.alert("Missing Information", "Please select a drop-off address");
+      } else {
+        Alert.alert(
+          "Missing Recipient Information",
+          "Please fill in name and phone number for all recipients"
+        );
+      }
       return;
     }
 
@@ -510,6 +525,7 @@ export default function BookLogisticsScreen() {
                 addressBookEntries={addressBook}
                 isLoadingAddressBook={isLoadingAddressBook}
                 role="sender"
+                initialExpanded={true}
               />
             </View>
           </View>
@@ -533,9 +549,11 @@ export default function BookLogisticsScreen() {
             {formData.deliveryLocations.map((delivery, index) => (
               <View key={index} style={styles.deliveryCard}>
                 <View style={styles.deliveryHeader}>
-                  <Text style={styles.deliveryNumber}>
-                    Delivery {index + 1}
-                  </Text>
+                  {formData.deliveryLocations.length > 1 && (
+                    <Text style={styles.deliveryNumber}>
+                      Delivery {index + 1}
+                    </Text>
+                  )}
                   {formData.deliveryLocations.length > 1 && (
                     <TouchableOpacity
                       onPress={() => handleRemoveDelivery(index)}
@@ -591,6 +609,8 @@ export default function BookLogisticsScreen() {
                   isLoadingAddressBook={isLoadingAddressBook}
                   onSearchAddressBook={handleSearchAddressBook}
                   onSelectFromAddressBook={handleSelectRecipientFromAddressBook}
+                  isRequired={formData.deliveryLocations.length > 1}
+                  totalDeliveries={formData.deliveryLocations.length}
                 />
               </View>
             ))}

@@ -9,8 +9,11 @@ import {
   userService,
   walletService,
 } from "@/lib/api";
+import { getStatusColor } from "@/lib/functions";
 import { StorageKeys, StorageMechanics } from "@/lib/storage-mechanics";
 import { useUser, useWallet } from "@/redux/hooks/hooks";
+import { tzColors } from "@/theme/color";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -26,8 +29,6 @@ import {
   View,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { tzColors } from "@/theme/color";
 const UI_SCALE = 0.82; // globally downscale sizes ~18%
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
@@ -95,8 +96,8 @@ export default function HomeScreen() {
             upperType === "DEPOSIT"
               ? "fund"
               : upperType === "WITHDRAWAL" || upperType === "ORDER"
-                ? "send"
-                : "receive";
+              ? "send"
+              : "receive";
           const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Package Sent";
           const created = new Date(t.createdAt);
           const dateStr = !isNaN(created.getTime())
@@ -142,14 +143,14 @@ export default function HomeScreen() {
       .catch((error) => {
         console.error(error);
       });
-    
+
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [access_token]);
 
   useEffect(() => {
     StorageMechanics.set(
       StorageKeys.HAS_ONBOARDING_COMPLETED,
-      StorageKeys.HAS_ONBOARDING_COMPLETED,
+      StorageKeys.HAS_ONBOARDING_COMPLETED
     );
 
     load(true);
@@ -160,7 +161,7 @@ export default function HomeScreen() {
     if (tasks.length > 0) {
       // Find the first review_request task
       const reviewTask = tasks.find(
-        (task) => task.category === "request_review",
+        (task) => task.category === "request_review"
       );
 
       if (reviewTask) {
@@ -220,27 +221,6 @@ export default function HomeScreen() {
             color={tzColors.primary}
           />
         );
-    }
-  };
-
-  const getStatusColor = (status: string): string => {
-    const s = String(status).toLowerCase();
-    switch (s) {
-      case "completed":
-      case "delivered":
-        return "#22c55e";
-      case "refunded":
-        return "#06b6d4";
-      case "in_transit":
-        return "#f59e0b";
-      case "pending":
-        return "#6b7280";
-      case "accepted":
-        return "#3b82f6";
-      case "failed":
-        return "#ef4444";
-      default:
-        return "#6b7280";
     }
   };
 
@@ -351,7 +331,7 @@ export default function HomeScreen() {
       console.error("Error submitting review:", error);
       Alert.alert(
         "Error",
-        error?.message || "Failed to submit review. Please try again.",
+        error?.message || "Failed to submit review. Please try again."
       );
     }
   };

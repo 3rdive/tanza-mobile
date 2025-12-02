@@ -5,6 +5,7 @@ import {
   type ITransactionDetail,
   type IUser,
 } from "@/lib/api";
+import { getStatusColor } from "@/lib/functions";
 import { tzColors } from "@/theme/color";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -22,29 +23,6 @@ import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
-
-const getStatusColor = (status: string): string => {
-  const s = String(status || "").toLowerCase();
-  switch (s) {
-    case "completed":
-    case "delivered":
-      return "#22c55e";
-    case "refunded":
-      return "#06b6d4";
-    case "in_transit":
-    case "transit":
-    case "picked_up":
-      return "#f59e0b";
-    case "pending":
-      return "#6b7280";
-    case "accepted":
-      return "#3b82f6";
-    case "failed":
-      return "#ef4444";
-    default:
-      return "#6b7280";
-  }
-};
 
 export default function TransactionDetail(): JSX.Element {
   const { id } = useLocalSearchParams<{ id?: string }>();

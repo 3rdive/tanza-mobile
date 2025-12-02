@@ -42,7 +42,11 @@ export default function MobileEntryScreen() {
       if (exists) {
         Alert.alert(
           "Mobile Already Registered",
-          "This mobile number is already associated with an account. Please sign in or use a different number."
+          "This mobile number is already associated with an account. Please sign in or use a different number.",
+          [
+            { text: "OK", onPress: () => {} },
+            { text: "Sign In", onPress: () => router.push("/(auth)/sign-in") },
+          ],
         );
         return;
       }

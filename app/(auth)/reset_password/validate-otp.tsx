@@ -13,6 +13,7 @@ import {
   TextInputKeyPressEventData,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 
@@ -22,9 +23,10 @@ const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
 export default function ValidateOtp() {
   const { mobile, setOtp: setResetOtp } = usePasswordResetFlow();
   const [otp, setOtp] = useState(["", "", "", ""]);
-  const [timer, setTimer] = useState(60);
-  const [isExpired, setIsExpired] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<React.Ref<TextInput>[]>([]);
 
   useEffect(() => {
@@ -34,39 +36,56 @@ export default function ValidateOtp() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          setIsExpired(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (timer > 0) {
+      const interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [timer]);
 
   const handleOtpChange = (value: string, index: number) => {
     setError(""); // Clear any previous errors
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
+    if (value.length > 1) {
+      // Handle paste of full OTP
+      const digits = value.replace(/\D/g, "").slice(0, 4).split("");
+      const newOtp = [...digits, "", "", "", ""].slice(0, 4);
+      setOtp(newOtp);
+      // Focus the next empty input or the last one
+      const nextIndex =
+        newOtp.findIndex((d) => d === "") === -1
+          ? 3
+          : newOtp.findIndex((d) => d === "");
+      if (nextIndex < 4) {
+        (inputRefs.current[nextIndex] as any).focus();
+      }
+      // Auto-verify if complete
+      if (newOtp.every((digit) => digit !== "")) {
+        setTimeout(() => {
+          verifyOTP(newOtp.join(""));
+        }, 500);
+      }
+    } else {
+      const newOtp = [...otp];
+      newOtp[index] = value;
+      setOtp(newOtp);
 
-    if (value && index < 3) {
-      (inputRefs.current[index + 1] as any).focus();
-    }
+      if (value && index < 3) {
+        (inputRefs.current[index + 1] as any).focus();
+      }
 
-    // Auto-verify when all digits are entered
-    if (newOtp.every((digit) => digit !== "")) {
-      setTimeout(() => {
-        verifyOTP(newOtp.join(""));
-      }, 500);
+      // Auto-verify when all digits are entered
+      if (newOtp.every((digit) => digit !== "")) {
+        setTimeout(() => {
+          verifyOTP(newOtp.join(""));
+        }, 500);
+      }
     }
   };
 
   const handleKeyPress = (
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    index: number
+    index: number,
   ) => {
     if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
       (inputRefs.current[index - 1] as any).focus();
@@ -74,11 +93,7 @@ export default function ValidateOtp() {
   };
 
   const verifyOTP = async (otpCode: string) => {
-    if (isExpired) {
-      setError("Code has expired. Please request a new one.");
-      return;
-    }
-
+    setIsVerifying(true);
     try {
       const resp = await authService.consumeOtp({
         otpType: "MOBILE",
@@ -99,25 +114,43 @@ export default function ValidateOtp() {
         e?.message ||
         "Invalid code. Please try again.";
       setError(msg);
-      if (msg?.toLowerCase().includes("expired")) {
-        setIsExpired(true);
-      }
       setOtp(["", "", "", ""]);
       (inputRefs.current[0] as any).focus();
+    } finally {
+      setIsVerifying(false);
     }
   };
 
-  const handleResendCode = () => {
-    if (timer > 0) return;
+  const handleResendCode = async () => {
+    if (timer > 0 || isResending) return;
 
-    setTimer(60);
-    setIsExpired(false);
+    setIsResending(true);
     setError("");
     setOtp(["", "", "", ""]);
-    Alert.alert(
-      "Code Sent",
-      "A new verification code has been sent to your email."
-    );
+
+    try {
+      const resp = await authService.sendOtp({
+        otpType: "MOBILE",
+        reference: mobile as string,
+      });
+      if (resp.success) {
+        setTimer(60);
+        Alert.alert(
+          "Code Sent",
+          "A new verification code has been sent to your phone.",
+        );
+      } else {
+        setError(resp.message || "Failed to send code. Please try again.");
+      }
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to send code. Please try again.";
+      setError(msg);
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -152,38 +185,40 @@ export default function ValidateOtp() {
                 styles.otpInput,
                 digit && styles.otpInputFilled,
                 error && styles.otpInputError,
-                isExpired && styles.otpInputExpired,
               ]}
               value={digit}
               onChangeText={(value) => handleOtpChange(value, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="numeric"
-              maxLength={1}
+              // maxLength={1}
               textAlign="center"
-              editable={!isExpired}
+              editable={!isVerifying}
             />
           ))}
         </View>
 
+        {isVerifying && (
+          <ActivityIndicator
+            size="large"
+            color="#00B624"
+            style={{ marginBottom: rs(20) }}
+          />
+        )}
+
         {/* Error Message */}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {/* Expired Message */}
-        {isExpired && (
-          <Text style={styles.expiredText}>
-            Code has expired. Please request a new one.
-          </Text>
-        )}
-
-        {/* Timer and Resend */}
+        {/* Resend */}
         <View style={styles.resendContainer}>
           {timer > 0 ? (
             <Text style={styles.timerText}>
               Resend code in {formatTime(timer)}
             </Text>
           ) : (
-            <TouchableOpacity onPress={handleResendCode}>
-              <Text style={styles.resendText}>Resend code</Text>
+            <TouchableOpacity onPress={handleResendCode} disabled={isResending}>
+              <Text style={styles.resendText}>
+                {isResending ? "Sending..." : "Resend code"}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -260,20 +295,9 @@ const styles = StyleSheet.create({
     borderColor: "#ff4444",
     backgroundColor: "#fff5f5",
   },
-  otpInputExpired: {
-    borderColor: "#ccc",
-    backgroundColor: "#f5f5f5",
-    color: "#999",
-  },
   errorText: {
     fontSize: rs(14),
     color: "#ff4444",
-    textAlign: "center",
-    marginBottom: rs(20),
-  },
-  expiredText: {
-    fontSize: rs(14),
-    color: "#ff6600",
     textAlign: "center",
     marginBottom: rs(20),
   },

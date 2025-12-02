@@ -27,6 +27,8 @@ interface DeliveryRecipientSectionProps {
   isLoadingAddressBook: boolean;
   onSearchAddressBook: (query: string) => void;
   onSelectFromAddressBook: (index: number, entry: any) => void;
+  isRequired?: boolean;
+  totalDeliveries?: number;
 }
 
 export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
@@ -38,6 +40,8 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
     isLoadingAddressBook,
     onSearchAddressBook,
     onSelectFromAddressBook,
+    isRequired = true,
+    totalDeliveries = 1,
   }) => {
     const [showAddressBook, setShowAddressBook] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -109,7 +113,9 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Recipient {deliveryIndex + 1}</Text>
+          {totalDeliveries > 1 && (
+            <Text style={styles.title}>Recipient {deliveryIndex + 1}</Text>
+          )}
           <TouchableOpacity
             onPress={() => setShowAddressBook(true)}
             style={styles.addressBookButton}
@@ -121,7 +127,7 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
 
         {/* Name */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Name *</Text>
+          <Text style={styles.inputLabel}>Name{isRequired ? " *" : ""}</Text>
           <TextInput
             style={styles.textInput}
             placeholder="Recipient name"
@@ -133,7 +139,7 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
 
         {/* Phone */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Phone *</Text>
+          <Text style={styles.inputLabel}>Phone{isRequired ? " *" : ""}</Text>
           <TextInput
             style={styles.textInput}
             placeholder="Recipient phone"

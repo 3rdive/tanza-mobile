@@ -172,7 +172,7 @@ export default function NewPasswordScreen() {
                   isPasswordValid && styles.requirementMet,
                 ]}
               >
-                At least 6 characters
+                At least 8 characters
               </Text>
             </View>
           </View>

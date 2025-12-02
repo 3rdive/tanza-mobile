@@ -36,24 +36,29 @@ export default function OTPVerificationScreen() {
   }, []);
 
   const handleOtpChange = (value: string, index: number) => {
-    // Check if a full OTP code (4 digits) is being pasted
-    if (value.length === 4 && /^\d{4}$/.test(value)) {
-      // Split the pasted value into individual digits
-      const newOtp = value.split('');
+    const newOtp = [...otp];
+
+    if (value.length > 1 && /^\d+$/.test(value)) {
+      // Handle pasting multiple digits starting from the current index
+      for (let i = 0; i < value.length && index + i < 4; i++) {
+        newOtp[index + i] = value[i];
+      }
       setOtp(newOtp);
 
-      // Focus the last input after pasting
-      inputRefs.current[3]?.focus();
+      // Focus the next input after the last filled one, or the last if all filled
+      const nextIndex = Math.min(index + value.length, 3);
+      inputRefs.current[nextIndex]?.focus();
 
-      // Auto-verify when all digits are filled
-      setTimeout(async () => {
-        // await consumeOtp();
-      }, 500);
+      // Auto-verify if all digits are filled
+      if (newOtp.every((digit) => digit !== "")) {
+        setTimeout(async () => {
+          // await consumeOtp();
+        }, 500);
+      }
       return;
     }
 
     // Handle single character input (existing logic)
-    const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
@@ -103,7 +108,7 @@ export default function OTPVerificationScreen() {
 
   const handleKeyPress = (
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    index: number
+    index: number,
   ) => {
     if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1].focus();
@@ -218,7 +223,7 @@ export default function OTPVerificationScreen() {
             style={[
               styles.nextText,
               (!otp.every((digit) => digit !== "") || isLogin) &&
-              styles.disabledText,
+                styles.disabledText,
             ]}
           >
             {isLogin ? "validating" : "Next"} →

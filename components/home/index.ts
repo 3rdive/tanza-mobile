@@ -1,1 +1,1 @@
-export * from "./WalletBalanceCard";
+export { default as WalletBalanceCard } from "./WalletBalanceCard";

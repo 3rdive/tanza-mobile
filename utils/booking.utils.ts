@@ -64,7 +64,7 @@ export const areDeliveriesValid = (
     (delivery) =>
       delivery.address.trim() !== "" &&
       delivery.coordinates !== null &&
-      isValidContactInfo(delivery.recipient)
+      (deliveryLocations.length === 1 || isValidContactInfo(delivery.recipient))
   );
 };
 
@@ -74,6 +74,8 @@ export const areDeliveriesValid = (
 export const hasDuplicateRecipients = (
   deliveryLocations: DeliveryLocation[]
 ): boolean => {
+  if (deliveryLocations.length <= 1) return false;
+
   const phones = deliveryLocations.map((d) =>
     d.recipient.phone.trim().toLowerCase()
   );

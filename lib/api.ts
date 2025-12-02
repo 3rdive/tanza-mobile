@@ -38,24 +38,24 @@ AXIOS.interceptors.request.use(
       const safeHeaders: Record<string, unknown> = { ...(headers || {}) };
       // if (safeHeaders.Authorization) safeHeaders.Authorization = "***redacted***";
 
-      console.log("[Axios Request]", {
-        baseURL: config.baseURL,
-        method: config.method,
-        url: config.url,
-        params: config.params,
-        headers: safeHeaders,
-        data: config.data,
-        timeout: config.timeout,
-      });
+      // console.log("[Axios Request]", {
+      //   baseURL: config.baseURL,
+      //   method: config.method,
+      //   url: config.url,
+      //   params: config.params,
+      //   headers: safeHeaders,
+      //   data: config.data,
+      //   timeout: config.timeout,
+      // });
     }
     return config;
   },
   (error) => {
     if (isDev) {
-      console.error("[Axios Request Error]", {
-        message: error?.message,
-        stack: error?.stack,
-      });
+      // console.error("[Axios Request Error]", {
+      //   message: error?.message,
+      //   stack: error?.stack,
+      // });
     }
     return Promise.reject(error);
   },
@@ -71,14 +71,13 @@ AXIOS.interceptors.response.use(
           ? rawHeaders.toJSON()
           : rawHeaders;
 
-      console.log("[Axios Response]", {
-        method: response.config?.method,
-        url: response.config?.url,
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-        data: response.data,
-      });
+      console.log(
+        "[Axios Response]",
+        JSON.stringify({
+          url: response.config?.url,
+          data: response.data,
+        }),
+      );
     }
     return response;
   },
@@ -86,13 +85,16 @@ AXIOS.interceptors.response.use(
     if (isDev) {
       if (isAxiosError(error)) {
         const res = error.response;
+        const message = Array.isArray(res?.data?.message)
+          ? res.data.message.join(", ")
+          : res?.data?.message || error.message;
         console.error("[Axios Response Error]", {
           method: error.config?.method,
           url: error.config?.url,
           status: res?.status,
           statusText: res?.statusText,
           data: res?.data,
-          message: error.message,
+          message,
         });
       } else {
         console.error("[Axios Response Error]", error);
@@ -167,6 +169,21 @@ export interface IResetPasswordPayload {
   password: string;
   reference: string;
   code: string;
+}
+
+export interface ITicket {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ICreateTicketPayload {
+  title: string;
+  description: string;
 }
 
 export const authService = {
@@ -623,19 +640,119 @@ export interface ILocationFeature {
 }
 
 export const locationService = {
+  // The backend has changed the shape of the location search result.
+  // The new endpoint returns a simple array of location objects like:
+  // [{ name, description, country, state, city, postcode, latitude, longitude, countrycode, street?, houseNumber? }, ...]
+  // To avoid changing callers across the app, we normalize that shape into the older `ILocationFeature[]`
+  // structure the rest of the code expects (properties + geometry).
   search: async (q: string) => {
-    const { data } = await AXIOS.get<IApiResponse<ILocationFeature[]>>(
-      "/api/v1/location/search",
-      { params: { q } },
+    // Import location cache utilities dynamically to avoid circular dependencies
+    const { fetchAndCacheUserLocation, getCachedLocationSuffix } = await import(
+      "@/utils/locationCache.utils"
     );
-    return data;
+
+    // Trigger background location fetch on first search (won't block current search)
+    fetchAndCacheUserLocation().catch(() => {
+      // Silently fail - search continues without location
+    });
+
+    // Append cached location to query if available (e.g., "user input, Lagos State, Nigeria")
+    const locationSuffix = getCachedLocationSuffix();
+    const enhancedQuery = q + locationSuffix;
+
+    const { data } = await AXIOS.get<IApiResponse<any[]>>(
+      "/api/v1/location/search",
+      { params: { q: enhancedQuery } },
+    );
+
+    const items = (data?.data || []) as any[];
+
+    const features: ILocationFeature[] = items.map((it: any, idx: number) => {
+      const props: ILocationFeatureProperties = {
+        osm_type: it.osm_type || "place",
+        osm_id: it.osm_id || idx,
+        osm_key: it.osm_key,
+        osm_value: it.osm_value,
+        type: it.type || "location",
+        postcode: it.postcode || it.postcode || undefined,
+        housenumber: it.houseNumber || it.housenumber || undefined,
+        countrycode:
+          it.countrycode || it.countryCode || it.countrycode || undefined,
+        name: it.name || it.displayName || it.description || undefined,
+        country: it.country,
+        city: it.city,
+        street: it.street,
+        state: it.state,
+        county: it.county,
+        extent: it.extent,
+      };
+
+      const geometry: ILocationFeatureGeometry = {
+        type: "Point",
+        // ensure coordinates are [lon, lat]; backend uses latitude/longitude fields
+        coordinates: [Number(it.longitude) || 0, Number(it.latitude) || 0],
+      };
+
+      return {
+        type: "Feature",
+        properties: props,
+        geometry,
+      } as ILocationFeature;
+    });
+
+    // Return the normalized shape wrapped in the same IApiResponse envelope
+    return {
+      success: data?.success ?? true,
+      message: data?.message ?? "",
+      data: features,
+    } as IApiResponse<ILocationFeature[]>;
   },
+
+  // The reverse endpoint now returns a flat object with fields like:
+  // { displayName, country, state, city, postcode, countryCode, houseNumber }
+  // Normalize that into an object containing `name` and `display_name` so existing callers
+  // (which look for `data.name` or `data.display_name`) continue to work.
   reverse: async (lat: number, lon: number) => {
     const { data } = await AXIOS.get<IApiResponse<any>>(
       "/api/v1/location/reverse",
       { params: { lat, lon } },
     );
-    return data;
+
+    const raw = data?.data ?? data ?? {};
+
+    const normalized = {
+      // prefer name/displayName/display_name; fall back to a readable composite
+      name:
+        raw?.name ||
+        raw?.displayName ||
+        raw?.display_name ||
+        [
+          raw?.houseNumber || raw?.house_number,
+          raw?.street,
+          raw?.city,
+          raw?.state,
+          raw?.country,
+        ]
+          .filter(Boolean)
+          .join(", ")
+          .trim() ||
+        "Current Location",
+      display_name: raw?.displayName || raw?.display_name || raw?.name,
+      country: raw?.country,
+      state: raw?.state,
+      city: raw?.city,
+      postcode: raw?.postcode,
+      countryCode: raw?.countryCode || raw?.countrycode,
+      houseNumber: raw?.houseNumber || raw?.housenumber || raw?.house_number,
+      // include raw payload for callers that need additional fields
+      raw,
+    };
+
+    return {
+      success: data?.success ?? true,
+      message: data?.message ?? "",
+      data: normalized,
+    } as IApiResponse<any>;
   },
 } as const;
 
@@ -759,6 +876,23 @@ export const ratingService = {
     const { data } = await AXIOS.post<IApiResponse<any>>(
       "/api/v1/ratings/rate",
       payload,
+    );
+    return data;
+  },
+} as const;
+
+// Support/Tickets
+export const ticketService = {
+  createTicket: async (payload: ICreateTicketPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<ITicket>>(
+      "/api/v1/tickets/",
+      payload,
+    );
+    return data;
+  },
+  getUserTickets: async () => {
+    const { data } = await AXIOS.get<IApiResponse<ITicket[]>>(
+      "/api/v1/tickets/user-tickets",
     );
     return data;
   },

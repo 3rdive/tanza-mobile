@@ -77,9 +77,10 @@ class SocketManager {
       }
     });
 
-    this.socket.on("joined", (data) => {
+    function handleJoined(data: any) {
       console.log("👥 Successfully joined channel:", data.channel);
-    });
+    }
+    this.socket.on("joined", handleJoined);
   }
 
   /**

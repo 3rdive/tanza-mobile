@@ -12,7 +12,7 @@ const statuses = [
   { label: "accepted", color: "#007bff" },
   { label: "picked_up", color: "#ff9500" },
   { label: "transit", color: "#2196F3" },
-  { label: "delivered", color: "#9c27b0" },
+  { label: "delivered", color: "#6b7280" },
 ];
 const DeliveryProgress: React.FC<Props> = ({ currentStatus }) => {
   const getColorForStatus = (label: string, index: number) => {

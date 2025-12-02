@@ -28,6 +28,7 @@ interface ContactInfoSectionProps {
   addressBookEntries?: AddressBookEntry[];
   isLoadingAddressBook?: boolean;
   role: "sender" | "recipient";
+  initialExpanded?: boolean;
 }
 
 export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
@@ -42,8 +43,9 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
   addressBookEntries = [],
   isLoadingAddressBook = false,
   role,
+  initialExpanded = true,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true); // Default to expanded
+  const [isExpanded, setIsExpanded] = useState(initialExpanded); // Use prop for initial state
   const [showAddressBookModal, setShowAddressBookModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -76,19 +78,6 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
     );
   });
 
-  // Debug logging after filter
-  console.log("ContactInfoSection - Filter Results:", {
-    role,
-    totalEntries: addressBookEntries.length,
-    filteredCount: filteredEntries.length,
-    searchQuery,
-    showModal: showAddressBookModal,
-    isLoading: isLoadingAddressBook,
-    filteredEntries: filteredEntries.map((e) => ({
-      name: e.name,
-      role: e.role,
-    })),
-  });
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
