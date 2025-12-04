@@ -8,7 +8,7 @@ export const CustomPaystackProvider = ({
   return (
     <PaystackProvider
       debug
-      publicKey={process.env.EXPO_PUBLIC_PAYSTACK_KEY as string}
+      publicKey={"pk_test_d6270c16dba0284483056ecffac2482a1e438d7a"}
       currency={"NGN"}
       defaultChannels={[
         "bank",

@@ -9,14 +9,15 @@ import {
   Alert,
   Animated,
   KeyboardAvoidingView,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { Ionicons } from "@expo/vector-icons";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
@@ -27,6 +28,7 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const { setUser } = useUser();
 
@@ -53,7 +55,7 @@ export default function SignInScreen() {
           "Invalid input",
           mode === "EMAIL"
             ? "Please enter a valid email address"
-            : "Please enter a valid mobile number"
+            : "Please enter a valid mobile number",
         );
         return;
       }
@@ -79,7 +81,7 @@ export default function SignInScreen() {
             "Account not found",
             `No account found for the provided ${
               mode === "EMAIL" ? "email" : "mobile number"
-            }.`
+            }.`,
           );
         }
       } catch (e: any) {
@@ -97,6 +99,14 @@ export default function SignInScreen() {
         return;
       }
 
+      if (password.length < 8) {
+        Alert.alert(
+          "Invalid Password",
+          "Password must be at least 8 characters long",
+        );
+        return;
+      }
+
       setIsLoading(true);
 
       try {
@@ -106,8 +116,8 @@ export default function SignInScreen() {
         });
         setIsLoading(false);
         if (resp.success) {
-				 console.log("auth_response:__: ",resp.data);
-				 await setUser(resp.data);
+          console.log("auth_response:__: ", resp.data);
+          await setUser(resp.data);
           Alert.alert("Success", "Signed in successfully!", [
             {
               text: "OK",
@@ -272,16 +282,35 @@ export default function SignInScreen() {
                 ]}
               >
                 <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                  autoFocus={true}
-                />
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!isPasswordVisible}
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                    autoFocus={true}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  >
+                    <Ionicons
+                      name={
+                        isPasswordVisible ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={rs(24)}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+                {password.length > 0 && password.length < 8 && (
+                  <Text style={styles.errorText}>
+                    Password must be at least 8 characters
+                  </Text>
+                )}
               </Animated.View>
             )}
 
@@ -310,7 +339,7 @@ export default function SignInScreen() {
             onPress={handleContinue}
             disabled={
               (!isValidIdentifier(identifier) && !showPassword) ||
-              (showPassword && !password) ||
+              (showPassword && (!password || password.length < 8)) ||
               isLoading
             }
           >
@@ -318,7 +347,7 @@ export default function SignInScreen() {
               style={[
                 styles.continueText,
                 ((!isValidIdentifier(identifier) && !showPassword) ||
-                  (showPassword && !password) ||
+                  (showPassword && (!password || password.length < 8)) ||
                   isLoading) &&
                   styles.disabledText,
               ]}
@@ -400,6 +429,23 @@ const styles = StyleSheet.create({
   formContainer: {},
   inputContainer: {
     marginBottom: rs(24),
+  },
+  passwordInputContainer: {
+    position: "relative",
+  },
+  passwordInput: {
+    paddingRight: rs(50),
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: rs(14),
+    top: rs(14),
+    padding: rs(4),
+  },
+  errorText: {
+    color: "#ff3b30",
+    fontSize: rs(14),
+    marginTop: rs(8),
   },
   label: {
     fontSize: rs(16),

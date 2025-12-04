@@ -29,7 +29,6 @@ import { useCallback, useEffect } from "react";
 import {
   Alert,
   Animated,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +36,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
@@ -48,7 +48,7 @@ export default function BookLogisticsScreen() {
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
   const selected = useAppSelector(
-    (s) => (s as any).locationSearch?.selected || null
+    (s) => (s as any).locationSearch?.selected || null,
   );
   const { send_type } = useLocalSearchParams();
   const { user } = useUser();
@@ -81,7 +81,7 @@ export default function BookLogisticsScreen() {
       formData.deliveryLocations,
       formData.isUrgent,
       formData.urgencyFee,
-      animatePriceAppearance
+      animatePriceAppearance,
     );
 
   const {
@@ -169,14 +169,19 @@ export default function BookLogisticsScreen() {
         resetUrgencyInputs();
       }
     },
-    [clearDeliveryLocation, formData.isUrgent, resetUrgency, resetUrgencyInputs]
+    [
+      clearDeliveryLocation,
+      formData.isUrgent,
+      resetUrgency,
+      resetUrgencyInputs,
+    ],
   );
 
   const handleAddDelivery = useCallback(() => {
     if (formData.deliveryLocations.length >= MAX_DELIVERIES) {
       Alert.alert(
         "Maximum Reached",
-        `You can add up to ${MAX_DELIVERIES} delivery locations.`
+        `You can add up to ${MAX_DELIVERIES} delivery locations.`,
       );
       return;
     }
@@ -188,7 +193,7 @@ export default function BookLogisticsScreen() {
       if (formData.deliveryLocations.length === 1) {
         Alert.alert(
           "Cannot Remove",
-          "You must have at least one delivery location."
+          "You must have at least one delivery location.",
         );
         return;
       }
@@ -202,7 +207,7 @@ export default function BookLogisticsScreen() {
         },
       ]);
     },
-    [formData.deliveryLocations.length, removeDeliveryLocation]
+    [formData.deliveryLocations.length, removeDeliveryLocation],
   );
 
   const handleSelectRecipientFromAddressBook = useCallback(
@@ -211,7 +216,7 @@ export default function BookLogisticsScreen() {
       updateDeliveryRecipient(index, "email", entry.email || "");
       updateDeliveryRecipient(index, "phone", entry.phone);
     },
-    [updateDeliveryRecipient]
+    [updateDeliveryRecipient],
   );
 
   const handleUrgentToggle = useCallback(() => {
@@ -233,7 +238,7 @@ export default function BookLogisticsScreen() {
           : "Invalid input",
         feeAmount === null && !selectedPercentage && !urgencyFeeInput
           ? "Please select a percentage or enter a custom amount"
-          : "Please enter a valid amount"
+          : "Please enter a valid amount",
       );
       return;
     }
@@ -249,7 +254,7 @@ export default function BookLogisticsScreen() {
     Alert.alert(
       "Urgency Fee Set",
       `Your delivery will be prioritized with an urgency fee of ₦${feeAmount.toLocaleString()} (${feeSource})`,
-      [{ text: "OK" }]
+      [{ text: "OK" }],
     );
   }, [
     calculateFeeAmount,
@@ -263,20 +268,20 @@ export default function BookLogisticsScreen() {
     if (!formData.pickupLocation || !pickupCoords) {
       Alert.alert(
         "Missing Information",
-        "Please select pickup location from the suggestions"
+        "Please select pickup location from the suggestions",
       );
       return;
     }
 
     // Validate deliveries
     const validDeliveries = formData.deliveryLocations.filter(
-      (d) => d.address && d.coordinates
+      (d) => d.address && d.coordinates,
     );
 
     if (validDeliveries.length === 0) {
       Alert.alert(
         "Missing Information",
-        "Please add at least one delivery location"
+        "Please add at least one delivery location",
       );
       return;
     }
@@ -303,7 +308,7 @@ export default function BookLogisticsScreen() {
       } else {
         Alert.alert(
           "Missing Recipient Information",
-          "Please fill in name and phone number for all recipients"
+          "Please fill in name and phone number for all recipients",
         );
       }
       return;
@@ -313,7 +318,7 @@ export default function BookLogisticsScreen() {
     if (hasDuplicateRecipients(formData.deliveryLocations)) {
       Alert.alert(
         "Duplicate Recipients",
-        "You cannot send to the same recipient twice. Please use unique recipients for each delivery."
+        "You cannot send to the same recipient twice. Please use unique recipients for each delivery.",
       );
       return;
     }
@@ -321,7 +326,7 @@ export default function BookLogisticsScreen() {
     if (!formData.sender.name || !formData.sender.phone) {
       Alert.alert(
         "Missing Sender Information",
-        "Please fill in sender's name and phone number"
+        "Please fill in sender's name and phone number",
       );
       return;
     }
@@ -329,7 +334,7 @@ export default function BookLogisticsScreen() {
     if (!calculatedPrice) {
       Alert.alert(
         "Price Calculation",
-        "Please wait for price calculation to complete"
+        "Please wait for price calculation to complete",
       );
       return;
     }
@@ -393,7 +398,7 @@ export default function BookLogisticsScreen() {
                         text: "Fund Wallet",
                         onPress: () => router.push("/payment"),
                       },
-                    ]
+                    ],
                   );
                 } else {
                   Alert.alert("Booking Failed", msg);
@@ -414,7 +419,7 @@ export default function BookLogisticsScreen() {
                       text: "Fund Wallet",
                       onPress: () => router.push("/payment"),
                     },
-                  ]
+                  ],
                 );
               } else {
                 Alert.alert("Booking Failed", String(msg));
@@ -424,7 +429,7 @@ export default function BookLogisticsScreen() {
             }
           },
         },
-      ]
+      ],
     );
   }, [
     formData,
@@ -442,7 +447,7 @@ export default function BookLogisticsScreen() {
     calculatedPrice,
     isCalculating,
     isBooking,
-    formData.sender
+    formData.sender,
   );
 
   const isUrgentDisabled =

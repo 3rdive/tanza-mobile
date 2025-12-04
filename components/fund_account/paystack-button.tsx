@@ -23,7 +23,7 @@ export const PaystackButton = () => {
   const [submitting, setSubmitting] = useState(false);
   const { popup } = usePaystack();
   const { user } = useUser();
-	const {wallet} =useWallet();
+  const { wallet } = useWallet();
   const parsedAmount = useMemo(() => {
     const n = Number(input.replace(/[^0-9.]/g, ""));
     return isNaN(n) ? 0 : Math.floor(n);
@@ -41,18 +41,20 @@ export const PaystackButton = () => {
     setSubmitting(true);
     setAmount(parsedAmount);
     popup.newTransaction({
-      email: user?.email || process.env.EXPO_PUBLIC_APP_EMAIL!,
+      email: "samuelab846@gmail.com",
       reference: `TZTX-${Date.now()}`,
       amount: parsedAmount,
       onSuccess: (response) => {
         console.log("payment-response: ", JSON.stringify(response));
 
-				walletService.fund({ customerCode: wallet?.customerCode!, transactionReference: response.reference})
+        walletService.fund({
+          customerCode: wallet?.customerCode!,
+          transactionReference: response.reference,
+        });
         handleClose();
-				Alert.alert("Payment successful", "Your transaction was successful.", [
-				 { text: "OK", onPress: () => router.replace('/(tabs)') },
-				]);
-
+        Alert.alert("Payment successful", "Your transaction was successful.", [
+          { text: "OK", onPress: () => router.replace("/(tabs)") },
+        ]);
       },
       onCancel: () => {
         console.log("payment-cancelled");
@@ -62,7 +64,7 @@ export const PaystackButton = () => {
         console.log("payment-error: ", error);
         Alert.alert(
           "Payment error",
-          "Something went wrong starting the payment. Please try again."
+          "Something went wrong starting the payment. Please try again.",
         );
         handleClose();
       },

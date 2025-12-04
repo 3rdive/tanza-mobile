@@ -5,7 +5,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HelpSupportScreen() {
   const [title, setTitle] = useState("");
@@ -34,7 +34,7 @@ export default function HelpSupportScreen() {
       if (response.success) {
         Alert.alert(
           "Success",
-          "Your support ticket has been submitted successfully."
+          "Your support ticket has been submitted successfully.",
         );
         setTitle("");
         setDescription("");
@@ -44,7 +44,7 @@ export default function HelpSupportScreen() {
     } catch (error: any) {
       Alert.alert(
         "Error",
-        error?.message || "Failed to submit ticket. Please try again."
+        error?.message || "Failed to submit ticket. Please try again.",
       );
     } finally {
       setSubmitting(false);

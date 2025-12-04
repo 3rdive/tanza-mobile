@@ -21,13 +21,13 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 const UI_SCALE = 0.82; // globally downscale sizes ~18%
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -96,8 +96,8 @@ export default function HomeScreen() {
             upperType === "DEPOSIT"
               ? "fund"
               : upperType === "WITHDRAWAL" || upperType === "ORDER"
-              ? "send"
-              : "receive";
+                ? "send"
+                : "receive";
           const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Package Sent";
           const created = new Date(t.createdAt);
           const dateStr = !isNaN(created.getTime())
@@ -150,7 +150,7 @@ export default function HomeScreen() {
   useEffect(() => {
     StorageMechanics.set(
       StorageKeys.HAS_ONBOARDING_COMPLETED,
-      StorageKeys.HAS_ONBOARDING_COMPLETED
+      StorageKeys.HAS_ONBOARDING_COMPLETED,
     );
 
     load(true);
@@ -161,7 +161,7 @@ export default function HomeScreen() {
     if (tasks.length > 0) {
       // Find the first review_request task
       const reviewTask = tasks.find(
-        (task) => task.category === "request_review"
+        (task) => task.category === "request_review",
       );
 
       if (reviewTask) {
@@ -331,7 +331,7 @@ export default function HomeScreen() {
       console.error("Error submitting review:", error);
       Alert.alert(
         "Error",
-        error?.message || "Failed to submit review. Please try again."
+        error?.message || "Failed to submit review. Please try again.",
       );
     }
   };

@@ -5,13 +5,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LocationSearchScreen() {
   const { context } = useLocalSearchParams<{ context?: string }>();
@@ -86,7 +86,7 @@ export default function LocationSearchScreen() {
         lat: item.lat,
         lon: item.lon,
         context: String(context || ""),
-      })
+      }),
     );
     router.back();
   };

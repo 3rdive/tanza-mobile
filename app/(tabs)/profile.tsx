@@ -5,15 +5,19 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
-import { useUser, useAppDispatch, useAppSelector } from "../../redux/hooks/hooks";
+import {
+  useUser,
+  useAppDispatch,
+  useAppSelector,
+} from "../../redux/hooks/hooks";
 import { useIsFocused } from "@react-navigation/native";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { userService } from "@/lib/api";
@@ -25,7 +29,9 @@ export default function ProfileScreen() {
   const { logOut, user, access_token, setUser } = useUser();
   const dispatch = useAppDispatch();
   const isFocused = useIsFocused();
-  const selected = useAppSelector((s) => (s as any).locationSearch?.selected || null);
+  const selected = useAppSelector(
+    (s) => (s as any).locationSearch?.selected || null,
+  );
 
   const firstName = (user as any)?.firstName || "John";
   const lastName = (user as any)?.lastName || "Doe";
@@ -51,13 +57,19 @@ export default function ProfileScreen() {
       if (!isFocused) return;
       if (!selected || (selected as any).context !== "profileAddress") return;
       try {
-        const title = (selected as any).title || (selected as any).subtitle || "";
+        const title =
+          (selected as any).title || (selected as any).subtitle || "";
         const lat = (selected as any).lat;
         const lon = (selected as any).lon;
         if (typeof lat === "number" && typeof lon === "number") {
-          const resp = await userService.updateProfile({ usersAddress: { name: title, lat, lon } });
+          const resp = await userService.updateProfile({
+            usersAddress: { name: title, lat, lon },
+          });
           if (resp?.success && resp.data) {
-            await setUser({ access_token: access_token || null, user: resp.data as any });
+            await setUser({
+              access_token: access_token || null,
+              user: resp.data as any,
+            });
           }
         }
       } catch (_e) {
@@ -117,10 +129,7 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.avatar}
-              />
+              <Image source={{ uri: profileImage }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarText}>
@@ -163,7 +172,12 @@ export default function ProfileScreen() {
             <ProfileItem
               label="Address"
               value={addressName}
-              onPress={() => router.push({ pathname: "/location-search", params: { context: "profileAddress" } })}
+              onPress={() =>
+                router.push({
+                  pathname: "/location-search",
+                  params: { context: "profileAddress" },
+                })
+              }
             />
           </View>
         </View>
@@ -184,11 +198,17 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.card}>
-            <TouchableOpacity style={styles.profileItem} onPress={() => router.push("/privacy-policy")}>
+            <TouchableOpacity
+              style={styles.profileItem}
+              onPress={() => router.push("/privacy-policy")}
+            >
               <Text style={styles.accountActionText}>Privacy Policy</Text>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.profileItem} onPress={() => router.push("/help-support")}>
+            <TouchableOpacity
+              style={styles.profileItem}
+              onPress={() => router.push("/help-support")}
+            >
               <Text style={styles.accountActionText}>Help & Support</Text>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>

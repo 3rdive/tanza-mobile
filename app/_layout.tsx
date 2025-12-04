@@ -11,6 +11,7 @@ import { SplashScreen, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo } from "react";
 import { Text, TextInput } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -62,23 +63,25 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   return (
-    <ReduxProvider>
-      <StatusBar style="auto" />
-      <AuthStack>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            headerTintColor: "#fff",
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="privacy-policy" />
-          <Stack.Screen name="help-support" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-      </AuthStack>
-    </ReduxProvider>
+    <SafeAreaProvider>
+      <ReduxProvider>
+        <StatusBar style="auto" />
+        <AuthStack>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              headerTintColor: "#fff",
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="privacy-policy" />
+            <Stack.Screen name="help-support" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+        </AuthStack>
+      </ReduxProvider>
+    </SafeAreaProvider>
   );
 }

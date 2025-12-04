@@ -25,7 +25,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -33,6 +32,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 //TODO: align email in complete.tsx, add userAddress to profileEdit, prefill pickup or dropOff location with users address
 
@@ -62,7 +62,7 @@ export default function CompleteInfoScreen() {
   const isFocused = useIsFocused();
   const dispatch = useAppDispatch();
   const selected = useAppSelector(
-    (s) => (s as any).locationSearch?.selected || null
+    (s) => (s as any).locationSearch?.selected || null,
   );
 
   console.log("otp", otp);
@@ -189,7 +189,7 @@ export default function CompleteInfoScreen() {
     } catch (e: any) {
       Alert.alert(
         "Location Error",
-        e?.message || "Unable to fetch current location"
+        e?.message || "Unable to fetch current location",
       );
     }
   };
@@ -271,7 +271,7 @@ export default function CompleteInfoScreen() {
                   if (perm.status !== "granted") {
                     Alert.alert(
                       "Permission needed",
-                      "We need access to your photos to select a profile picture."
+                      "We need access to your photos to select a profile picture.",
                     );
                     return;
                   }
@@ -301,7 +301,7 @@ export default function CompleteInfoScreen() {
                   } else {
                     Alert.alert(
                       "Upload failed",
-                      resp?.message || "Unable to upload image"
+                      resp?.message || "Unable to upload image",
                     );
                   }
                 } catch (e: any) {
@@ -309,7 +309,7 @@ export default function CompleteInfoScreen() {
                     "Upload Error",
                     e?.response?.data?.message ||
                       e?.message ||
-                      "Unable to upload image"
+                      "Unable to upload image",
                   );
                 }
               }}

@@ -1,6 +1,15 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 import { userService } from "@/lib/api";
 
@@ -27,7 +36,10 @@ export default function ChangePasswordScreen() {
       return false;
     }
     if (newPassword === currentPassword) {
-      Alert.alert("Invalid", "New password must be different from current password");
+      Alert.alert(
+        "Invalid",
+        "New password must be different from current password",
+      );
       return false;
     }
     return true;
@@ -37,16 +49,22 @@ export default function ChangePasswordScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const resp = await userService.updatePassword({ currentPassword, newPassword });
+      const resp = await userService.updatePassword({
+        currentPassword,
+        newPassword,
+      });
       if (resp?.success) {
-        Alert.alert("Success", resp.message || "Password changed successfully", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
+        Alert.alert(
+          "Success",
+          resp.message || "Password changed successfully",
+          [{ text: "OK", onPress: () => router.back() }],
+        );
       } else {
         Alert.alert("Failed", resp?.message || "Could not change password");
       }
     } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || "Failed to change password";
+      const msg =
+        e?.response?.data?.message || e?.message || "Failed to change password";
       Alert.alert("Error", msg);
     } finally {
       setLoading(false);
@@ -56,11 +74,19 @@ export default function ChangePasswordScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} disabled={loading}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          disabled={loading}
+        >
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Change Password</Text>
-        <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveButton}>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={loading}
+          style={styles.saveButton}
+        >
           <Text style={[styles.saveButtonText, loading && styles.disabledText]}>
             {loading ? "Saving..." : "Save"}
           </Text>
@@ -141,7 +167,12 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   inputContainer: { marginBottom: rs(20) },
-  label: { fontSize: rs(16), color: "#000", marginBottom: rs(8), fontWeight: "500" },
+  label: {
+    fontSize: rs(16),
+    color: "#000",
+    marginBottom: rs(8),
+    fontWeight: "500",
+  },
   input: {
     borderWidth: 2,
     borderColor: "#e0e0e0",

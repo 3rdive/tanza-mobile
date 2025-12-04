@@ -12,13 +12,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { JSX, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
@@ -198,7 +198,7 @@ export default function TransactionDetail(): JSX.Element {
               if (tracking && tracking.length > 0) {
                 // Use the most recent tracking status by createdAt
                 const last = tracking.reduce((a, b) =>
-                  new Date(a.createdAt) > new Date(b.createdAt) ? a : b
+                  new Date(a.createdAt) > new Date(b.createdAt) ? a : b,
                 );
                 derived = String(last.status);
               } else if ((apiTx as any)?.order?.orderStatus) {
@@ -231,7 +231,7 @@ export default function TransactionDetail(): JSX.Element {
             if (tracking && tracking.length > 0) {
               // Use the most recent tracking status by createdAt
               const last = tracking.reduce((a, b) =>
-                new Date(a.createdAt) > new Date(b.createdAt) ? a : b
+                new Date(a.createdAt) > new Date(b.createdAt) ? a : b,
               );
               derived = String(last.status);
             } else if ((apiTx as any)?.order?.orderStatus) {

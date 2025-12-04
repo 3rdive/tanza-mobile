@@ -5,7 +5,9 @@ import { BASE_URL } from "./api";
 const getSocketUrl = () => {
   try {
     const url = new URL(BASE_URL);
-    return `${url.protocol}//${url.hostname}:3006`;
+    const finalurl = `${url.hostname}:3006`;
+    console.log({ finalurl });
+    return finalurl;
   } catch {
     // Fallback if BASE_URL is malformed
     return "http://localhost:3006";

@@ -5,13 +5,13 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
@@ -39,7 +39,7 @@ export default function NewPasswordScreen() {
     if (!isFormValid) {
       Alert.alert(
         "Invalid Password",
-        "Please check your password requirements"
+        "Please check your password requirements",
       );
       return;
     }
@@ -60,7 +60,7 @@ export default function NewPasswordScreen() {
               text: "Sign In",
               onPress: () => router.replace("/(auth)/sign-in"),
             },
-          ]
+          ],
         );
       } else {
         Alert.alert("Failed", resp.message || "Unable to reset password");
