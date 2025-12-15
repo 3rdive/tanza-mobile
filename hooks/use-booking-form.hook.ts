@@ -12,6 +12,7 @@ const defaultFormData: BookingFormData = {
   isUrgent: false,
   numberOfItems: 1,
   urgencyFee: 0,
+  pickupIsCurrentLocation: false,
   sender: {
     name: "",
     email: "",
@@ -21,6 +22,7 @@ const defaultFormData: BookingFormData = {
     {
       address: "",
       coordinates: null,
+      isCurrentLocation: false,
       recipient: {
         name: "",
         email: "",
@@ -43,13 +45,25 @@ export const useBookingForm = () => {
   );
 
   const clearPickup = useCallback(() => {
-    setFormData((prev) => ({ ...prev, pickupLocation: "" }));
+    setFormData((prev) => ({
+      ...prev,
+      pickupLocation: "",
+      pickupIsCurrentLocation: false,
+    }));
     setPickupCoords(null);
   }, []);
 
   const setPickupLocation = useCallback(
-    (location: string, coords: Coordinates) => {
-      setFormData((prev) => ({ ...prev, pickupLocation: location }));
+    (
+      location: string,
+      coords: Coordinates,
+      isCurrentLocation: boolean = false
+    ) => {
+      setFormData((prev) => ({
+        ...prev,
+        pickupLocation: location,
+        pickupIsCurrentLocation: isCurrentLocation,
+      }));
       setPickupCoords(coords);
     },
     []
@@ -63,6 +77,7 @@ export const useBookingForm = () => {
         {
           address: "",
           coordinates: null,
+          isCurrentLocation: false,
           recipient: {
             name: "",
             email: "",
@@ -81,11 +96,18 @@ export const useBookingForm = () => {
   }, []);
 
   const updateDeliveryLocation = useCallback(
-    (index: number, address: string, coords: Coordinates) => {
+    (
+      index: number,
+      address: string,
+      coords: Coordinates,
+      isCurrentLocation: boolean = false
+    ) => {
       setFormData((prev) => ({
         ...prev,
         deliveryLocations: prev.deliveryLocations.map((delivery, i) =>
-          i === index ? { ...delivery, address, coordinates: coords } : delivery
+          i === index
+            ? { ...delivery, address, coordinates: coords, isCurrentLocation }
+            : delivery
         ),
       }));
     },
@@ -96,7 +118,14 @@ export const useBookingForm = () => {
     setFormData((prev) => ({
       ...prev,
       deliveryLocations: prev.deliveryLocations.map((delivery, i) =>
-        i === index ? { ...delivery, address: "", coordinates: null } : delivery
+        i === index
+          ? {
+              ...delivery,
+              address: "",
+              coordinates: null,
+              isCurrentLocation: false,
+            }
+          : delivery
       ),
     }));
   }, []);

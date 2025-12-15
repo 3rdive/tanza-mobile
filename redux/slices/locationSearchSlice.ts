@@ -5,7 +5,8 @@ export interface SelectedLocationPayload {
   subtitle?: string;
   lat?: number;
   lon?: number;
-  context?: string; // e.g., usersAddress | pickup | dropoff
+  context?: string; // e.g., usersAddress | pickup | dropoff | delivery-0
+  isCurrentLocation?: boolean;
 }
 
 interface LocationSearchState {
@@ -20,7 +21,10 @@ const locationSearchSlice = createSlice({
   name: "locationSearch",
   initialState,
   reducers: {
-    setSelectedLocation: (state, action: PayloadAction<SelectedLocationPayload>) => {
+    setSelectedLocation: (
+      state,
+      action: PayloadAction<SelectedLocationPayload>
+    ) => {
       state.selected = action.payload;
     },
     clearSelectedLocation: (state) => {
@@ -29,5 +33,6 @@ const locationSearchSlice = createSlice({
   },
 });
 
-export const { setSelectedLocation, clearSelectedLocation } = locationSearchSlice.actions;
+export const { setSelectedLocation, clearSelectedLocation } =
+  locationSearchSlice.actions;
 export default locationSearchSlice.reducer;

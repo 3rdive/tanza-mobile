@@ -26,6 +26,7 @@ export interface AddressBookResponse {
 export interface DeliveryLocation {
   address: string;
   coordinates: Coordinates | null;
+  isCurrentLocation?: boolean;
   recipient: ContactInfo;
 }
 
@@ -37,6 +38,7 @@ export interface BookingFormData {
   urgencyFee: number;
   sender: ContactInfo;
   deliveryLocations: DeliveryLocation[];
+  pickupIsCurrentLocation?: boolean;
   // Legacy fields for backward compatibility during migration
   dropOffLocation?: string;
   recipient?: ContactInfo;

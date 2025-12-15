@@ -1,6 +1,7 @@
 import { transactionService } from "@/lib/api";
 import { tzColors } from "@/theme/color";
-import { router } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
 import { JSX, useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,9 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue(n * UI_SCALE);
@@ -48,6 +48,7 @@ type Transaction = {
 };
 
 export default function TransactionHistoryScreen(): JSX.Element {
+  const { refresh } = useLocalSearchParams<{ refresh: string }>();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -102,7 +103,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
         const mapped = mapApiToUI(apiItems);
         setHasMore(
           ((resp as any)?.pagination?.page || pageToLoad) <
-            ((resp as any)?.pagination?.totalPages || 0),
+            ((resp as any)?.pagination?.totalPages || 0)
         );
         setPage(pageToLoad);
         setTransactions((prev) => (append ? [...prev, ...mapped] : mapped));
@@ -110,7 +111,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
         console.warn("Failed to load transactions", e);
       }
     },
-    [filter, mapApiToUI],
+    [filter, mapApiToUI]
   );
 
   useEffect(() => {
@@ -130,8 +131,15 @@ export default function TransactionHistoryScreen(): JSX.Element {
     fetchPage(1, false).finally(() => setRefreshing(false));
   }, [fetchPage]);
 
+  useEffect(() => {
+    if (refresh === "true") {
+      onRefresh();
+      router.setParams({ refresh: "" });
+    }
+  }, [refresh, onRefresh]);
+
   const filterTransactions = (
-    transactionList: Transaction[],
+    transactionList: Transaction[]
   ): Transaction[] => {
     return transactionList; // server-side filtered
   };

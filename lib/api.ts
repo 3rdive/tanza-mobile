@@ -58,7 +58,7 @@ AXIOS.interceptors.request.use(
       // });
     }
     return Promise.reject(error);
-  },
+  }
 );
 
 // Response interceptor
@@ -76,7 +76,7 @@ AXIOS.interceptors.response.use(
         JSON.stringify({
           url: response.config?.url,
           data: response.data,
-        }),
+        })
       );
     }
     return response;
@@ -101,7 +101,7 @@ AXIOS.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  },
+  }
 );
 
 // Types
@@ -190,35 +190,35 @@ export const authService = {
   login: async (payload: ILoginPayload) => {
     const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>(
       "/api/v1/auth/login",
-      payload,
+      payload
     );
     return data;
   },
   signUp: async (payload: ISignUpPayload) => {
     const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>(
       "/api/v1/auth/sign-up",
-      payload,
+      payload
     );
     return data;
   },
   sendOtp: async (payload: IOtpPayload) => {
     const { data } = await AXIOS.post<IApiResponse<string>>(
       "/api/v1/otp",
-      payload,
+      payload
     );
     return data;
   },
   consumeOtp: async (payload: IOtpConsumePayload) => {
     const { data } = await AXIOS.post<IApiResponse<{ message: string }>>(
       "/api/v1/otp/consume",
-      payload,
+      payload
     );
     return data;
   },
   resetPassword: async (payload: IResetPasswordPayload) => {
     const { data } = await AXIOS.post<IApiResponse<string>>(
       "/api/v1/auth/reset-password",
-      payload,
+      payload
     );
     return data;
   },
@@ -232,7 +232,7 @@ export const authService = {
   userExistsByMobile: async (mobile: string) => {
     const { data } = await AXIOS.get<IApiResponse<any>>(
       "/api/v1/user/exists/mobile",
-      { params: { mobile } },
+      { params: { mobile } }
     );
     // Support either {data: {exists:boolean}} or {data:boolean}
     const exists = (data as any)?.data?.exists ?? (data as any)?.data ?? false;
@@ -241,7 +241,7 @@ export const authService = {
   userExistsByEmail: async (email: string) => {
     const { data } = await AXIOS.get<IApiResponse<any>>(
       "/api/v1/user/exists/email",
-      { params: { email } },
+      { params: { email } }
     );
     const exists = (data as any)?.data?.exists ?? (data as any)?.data ?? false;
     return Boolean(exists);
@@ -295,14 +295,14 @@ export const walletService = {
   },
   getVirtualAccount: async () => {
     const { data } = await AXIOS.get<IApiResponse<IVirtualAccount>>(
-      "/api/v1/wallet/virtual-account",
+      "/api/v1/wallet/virtual-account"
     );
     return data;
   },
   fund: async (payload: IFundWallet) => {
     const { data } = await AXIOS.post<IApiResponse<string>>(
       "/api/v1/wallet/fund",
-      payload,
+      payload
     );
     return data;
   },
@@ -332,20 +332,20 @@ export const userService = {
   updateProfile: async (payload: IUpdateProfilePayload) => {
     const { data } = await AXIOS.put<IApiResponse<IUser>>(
       "/api/v1/user/profile",
-      payload,
+      payload
     );
     return data;
   },
   updatePassword: async (payload: IUpdatePasswordPayload) => {
     const { data } = await AXIOS.put<IApiResponse<string>>(
       "/api/v1/user/password/update",
-      payload,
+      payload
     );
     return data;
   },
   getProfile: async () => {
     const { data } = await AXIOS.get<IApiResponse<IUser>>(
-      "/api/v1/user/profile",
+      "/api/v1/user/profile"
     );
     return data;
   },
@@ -354,7 +354,7 @@ export const userService = {
   }) => {
     const { data } = await AXIOS.post<IApiResponse<any>>(
       "/api/v1/user/push-notification/token",
-      payload,
+      payload
     );
     return data;
   },
@@ -445,7 +445,7 @@ export const transactionService = {
   },
   getById: async (id: string) => {
     const { data } = await AXIOS.get<IApiResponse<ITransactionDetail | null>>(
-      `/api/v1/transaction/${id}`,
+      `/api/v1/transaction/${id}`
     );
     return data;
   },
@@ -511,7 +511,7 @@ export const orderService = {
   calculateCharge: async (params: ICalculateChargeParams) => {
     const { data } = await AXIOS.get<IApiResponse<ICalculateChargeData>>(
       "/api/v1/order/calculate-charge",
-      { params },
+      { params }
     );
     return data;
   },
@@ -550,12 +550,12 @@ export const orderService = {
       isUrgent: boolean;
       urgencyFee?: number;
     },
-    payload: ICreateOrderPayload,
+    payload: ICreateOrderPayload
   ) => {
     const { data } = await AXIOS.post<IApiResponse<IOrderData>>(
       "/api/v1/order",
       payload,
-      { params: query },
+      { params: query }
     );
     return data;
   },
@@ -583,7 +583,7 @@ export const orderService = {
   }) => {
     const { data } = await AXIOS.post<IApiResponse<IOrderData>>(
       "/api/v1/order/multiple-delivery",
-      payload,
+      payload
     );
     return data;
   },
@@ -662,7 +662,7 @@ export const locationService = {
 
     const { data } = await AXIOS.get<IApiResponse<any[]>>(
       "/api/v1/location/search",
-      { params: { q: enhancedQuery } },
+      { params: { q: enhancedQuery } }
     );
 
     const items = (data?.data || []) as any[];
@@ -715,7 +715,7 @@ export const locationService = {
   reverse: async (lat: number, lon: number) => {
     const { data } = await AXIOS.get<IApiResponse<any>>(
       "/api/v1/location/reverse",
-      { params: { lat, lon } },
+      { params: { lat, lon } }
     );
 
     const raw = data?.data ?? data ?? {};
@@ -770,7 +770,7 @@ export const ratingsService = {
       payload,
       {
         headers: { "Content-Type": "application/json" },
-      },
+      }
     );
     return data;
   },
@@ -857,14 +857,14 @@ export const taskService = {
   },
   completeTask: async (taskId: string) => {
     const { data } = await AXIOS.patch<IApiResponse<ITask>>(
-      `/api/v1/task/${taskId}/complete`,
+      `/api/v1/task/${taskId}/complete`
     );
     return data;
   },
   cancelTask: async (taskId: string) => {
     console.log("Cancelling task:", taskId);
     const { data } = await AXIOS.patch<IApiResponse<ITask>>(
-      `/api/v1/task/${taskId}/cancel`,
+      `/api/v1/task/${taskId}/cancel`
     );
     return data;
   },
@@ -875,7 +875,7 @@ export const ratingService = {
   rateUser: async (payload: IRateUserPayload) => {
     const { data } = await AXIOS.post<IApiResponse<any>>(
       "/api/v1/ratings/rate",
-      payload,
+      payload
     );
     return data;
   },
@@ -886,13 +886,13 @@ export const ticketService = {
   createTicket: async (payload: ICreateTicketPayload) => {
     const { data } = await AXIOS.post<IApiResponse<ITicket>>(
       "/api/v1/tickets/",
-      payload,
+      payload
     );
     return data;
   },
   getUserTickets: async () => {
     const { data } = await AXIOS.get<IApiResponse<ITicket[]>>(
-      "/api/v1/tickets/user-tickets",
+      "/api/v1/tickets/user-tickets"
     );
     return data;
   },
