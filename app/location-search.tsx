@@ -8,6 +8,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -190,75 +192,83 @@ export default function LocationSearchScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.cancelBtn}
-        >
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Search location</Text>
-        <View style={{ width: 70 }} />
-      </View>
-
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Type an address, area or place"
-          value={query}
-          onChangeText={setQuery}
-          autoCorrect={false}
-          autoFocus
-        />
-      </View>
-
-      {/* Use Current Location Button */}
-      <TouchableOpacity
-        style={styles.currentLocationButton}
-        onPress={handleUseCurrentLocation}
-        disabled={loadingCurrentLocation}
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <MaterialIcons name="my-location" size={20} color="#00B624" />
-        <Text style={styles.currentLocationText}>
-          {loadingCurrentLocation
-            ? "Getting location..."
-            : "Use Current Location"}
-        </Text>
-        {loadingCurrentLocation && (
-          <ActivityIndicator size="small" color="#00B624" />
-        )}
-      </TouchableOpacity>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.cancelBtn}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Search location</Text>
+          <View style={{ width: 70 }} />
+        </View>
 
-      <View style={styles.results}>
-        {loading && (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator />
-            <Text style={styles.loadingText}>Searching…</Text>
-          </View>
-        )}
-        {!loading && results.length === 0 && query.trim().length < 2 && (
-          <Text style={styles.helper}>
-            Start typing to search for a location
+        <View style={styles.searchBar}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Type an address, area or place"
+            value={query}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            autoFocus
+          />
+        </View>
+
+        {/* Use Current Location Button */}
+        <TouchableOpacity
+          style={styles.currentLocationButton}
+          onPress={handleUseCurrentLocation}
+          disabled={loadingCurrentLocation}
+        >
+          <MaterialIcons name="my-location" size={20} color="#00B624" />
+          <Text style={styles.currentLocationText}>
+            {loadingCurrentLocation
+              ? "Getting location..."
+              : "Use Current Location"}
           </Text>
-        )}
-        {!loading && results.length === 0 && query.trim().length >= 2 && (
-          <Text style={styles.helper}>No results. Try a different query.</Text>
-        )}
+          {loadingCurrentLocation && (
+            <ActivityIndicator size="small" color="#00B624" />
+          )}
+        </TouchableOpacity>
 
-        {!loading &&
-          results.map((r, key) => (
-            <TouchableOpacity
-              key={key}
-              style={styles.item}
-              onPress={() => handleSelect(r)}
-            >
-              <Text style={styles.itemTitle}>{r.title}</Text>
-              {!!r.subtitle && (
-                <Text style={styles.itemSubtitle}>{r.subtitle}</Text>
-              )}
-            </TouchableOpacity>
-          ))}
-      </View>
+        <View style={styles.results}>
+          {loading && (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator />
+              <Text style={styles.loadingText}>Searching…</Text>
+            </View>
+          )}
+          {!loading && results.length === 0 && query.trim().length < 2 && (
+            <Text style={styles.helper}>
+              Start typing to search for a location
+            </Text>
+          )}
+          {!loading && results.length === 0 && query.trim().length >= 2 && (
+            <Text style={styles.helper}>
+              No results. Try a different query.
+            </Text>
+          )}
+
+          {!loading &&
+            results.map((r, key) => (
+              <TouchableOpacity
+                key={key}
+                style={styles.item}
+                onPress={() => handleSelect(r)}
+              >
+                <Text style={styles.itemTitle}>{r.title}</Text>
+                {!!r.subtitle && (
+                  <Text style={styles.itemSubtitle}>{r.subtitle}</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

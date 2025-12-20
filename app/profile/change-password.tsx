@@ -1,7 +1,10 @@
+import { userService } from "@/lib/api";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,9 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
-import { userService } from "@/lib/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -38,7 +40,7 @@ export default function ChangePasswordScreen() {
     if (newPassword === currentPassword) {
       Alert.alert(
         "Invalid",
-        "New password must be different from current password",
+        "New password must be different from current password"
       );
       return false;
     }
@@ -57,7 +59,7 @@ export default function ChangePasswordScreen() {
         Alert.alert(
           "Success",
           resp.message || "Password changed successfully",
-          [{ text: "OK", onPress: () => router.back() }],
+          [{ text: "OK", onPress: () => router.back() }]
         );
       } else {
         Alert.alert("Failed", resp?.message || "Could not change password");
@@ -73,65 +75,77 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          disabled={loading}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Change Password</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={loading}
-          style={styles.saveButton}
-        >
-          <Text style={[styles.saveButtonText, loading && styles.disabledText]}>
-            {loading ? "Saving..." : "Save"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.formSection}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Current Password</Text>
-            <TextInput
-              style={styles.input}
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="Enter current password"
-              secureTextEntry
-              editable={!loading}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>New Password</Text>
-            <TextInput
-              style={styles.input}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="Enter new password"
-              secureTextEntry
-              editable={!loading}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm New Password</Text>
-            <TextInput
-              style={styles.input}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder="Re-enter new password"
-              secureTextEntry
-              editable={!loading}
-            />
-          </View>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            disabled={loading}
+          >
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Change Password</Text>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={loading}
+            style={styles.saveButton}
+          >
+            <Text
+              style={[styles.saveButtonText, loading && styles.disabledText]}
+            >
+              {loading ? "Saving..." : "Save"}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Current Password</Text>
+              <TextInput
+                style={styles.input}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="Enter current password"
+                secureTextEntry
+                editable={!loading}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>New Password</Text>
+              <TextInput
+                style={styles.input}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Enter new password"
+                secureTextEntry
+                editable={!loading}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Confirm New Password</Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Re-enter new password"
+                secureTextEntry
+                editable={!loading}
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

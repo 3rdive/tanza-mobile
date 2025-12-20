@@ -29,6 +29,8 @@ import { useCallback, useEffect } from "react";
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -452,140 +454,53 @@ export default function BookLogisticsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Book Logistics</Text>
-      </View>
-
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: rs(140) }}
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <Animated.View
-          style={[
-            styles.formContainer,
-            {
-              opacity: fadeAnim,
-              transform: [
-                {
-                  translateY: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [50, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Book Logistics</Text>
+        </View>
+
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: rs(20) }}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Pickup Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              <MaterialCommunityIcons
-                name="map-marker"
-                size={rs(18)}
-                color="#00B624"
-              />{" "}
-              Pickup Information
-            </Text>
-            <View style={styles.pickupCard}>
-              <View style={styles.locationInputContainer}>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.locationInput}
-                    value={formData.pickupLocation}
-                    onFocus={() => {
-                      const deliveryIndices = formData.deliveryLocations
-                        .map((d, idx) => (d.isCurrentLocation ? idx : -1))
-                        .filter((idx) => idx !== -1);
-
-                      router.push({
-                        pathname: "/location-search",
-                        params: {
-                          context: "pickup",
-                          pickupIsCurrentLocation:
-                            formData.pickupIsCurrentLocation ? "true" : "false",
-                          deliveryIndicesUsingCurrentLocation:
-                            deliveryIndices.join(","),
-                        },
-                      });
-                    }}
-                    showSoftInputOnFocus={false}
-                    placeholder="Select pickup location"
-                    placeholderTextColor="#999"
-                  />
-                  {formData.pickupLocation && (
-                    <TouchableOpacity
-                      onPress={handleClearPickup}
-                      style={styles.clearButton}
-                    >
-                      <MaterialIcons name="close" size={rs(18)} color="#666" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              <ContactInfoSection
-                title="Sender Information"
-                contactInfo={formData.sender}
-                onUpdateField={updateSenderField}
-                onUseMyInfo={handleUseSenderMyInfo}
-                onSelectFromAddressBook={handleSelectSenderFromAddressBook}
-                onSearchAddressBook={handleSearchAddressBook}
-                canUseMyInfo={true}
-                useMyInfoChecked={useSenderMyInfo}
-                addressBookEntries={addressBook}
-                isLoadingAddressBook={isLoadingAddressBook}
-                role="sender"
-                initialExpanded={true}
-              />
-            </View>
-          </View>
-
-          {/* Delivery Locations */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
+          <Animated.View
+            style={[
+              styles.formContainer,
+              {
+                opacity: fadeAnim,
+                transform: [
+                  {
+                    translateY: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [50, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            {/* Pickup Information */}
+            <View style={styles.section}>
               <Text style={styles.sectionTitle}>
                 <MaterialCommunityIcons
-                  name="truck-delivery"
+                  name="map-marker"
                   size={rs(18)}
                   color="#00B624"
                 />{" "}
-                Delivery Locations
+                Pickup Information
               </Text>
-              <Text style={styles.deliveryCount}>
-                {formData.deliveryLocations.length} / {MAX_DELIVERIES}
-              </Text>
-            </View>
-
-            {formData.deliveryLocations.map((delivery, index) => (
-              <View key={index} style={styles.deliveryCard}>
-                <View style={styles.deliveryHeader}>
-                  {formData.deliveryLocations.length > 1 && (
-                    <Text style={styles.deliveryNumber}>
-                      Delivery {index + 1}
-                    </Text>
-                  )}
-                  {formData.deliveryLocations.length > 1 && (
-                    <TouchableOpacity
-                      onPress={() => handleRemoveDelivery(index)}
-                      style={styles.removeButton}
-                    >
-                      <MaterialIcons
-                        name="close"
-                        size={rs(20)}
-                        color="#ff4444"
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Location Input */}
+              <View style={styles.pickupCard}>
                 <View style={styles.locationInputContainer}>
-                  <Text style={styles.inputLabel}>Drop-off Address</Text>
                   <View style={styles.inputWrapper}>
                     <TextInput
                       style={styles.locationInput}
-                      value={delivery.address}
+                      value={formData.pickupLocation}
                       onFocus={() => {
                         const deliveryIndices = formData.deliveryLocations
                           .map((d, idx) => (d.isCurrentLocation ? idx : -1))
@@ -594,7 +509,7 @@ export default function BookLogisticsScreen() {
                         router.push({
                           pathname: "/location-search",
                           params: {
-                            context: `delivery-${index}`,
+                            context: "pickup",
                             pickupIsCurrentLocation:
                               formData.pickupIsCurrentLocation
                                 ? "true"
@@ -605,12 +520,12 @@ export default function BookLogisticsScreen() {
                         });
                       }}
                       showSoftInputOnFocus={false}
-                      placeholder="Select drop-off location"
+                      placeholder="Select pickup location"
                       placeholderTextColor="#999"
                     />
-                    {delivery.address && (
+                    {formData.pickupLocation && (
                       <TouchableOpacity
-                        onPress={() => handleClearDelivery(index)}
+                        onPress={handleClearPickup}
                         style={styles.clearButton}
                       >
                         <MaterialIcons
@@ -623,72 +538,174 @@ export default function BookLogisticsScreen() {
                   </View>
                 </View>
 
-                {/* Recipient Info */}
-                <DeliveryRecipientSection
-                  deliveryIndex={index}
-                  recipient={delivery.recipient}
-                  onUpdateField={updateDeliveryRecipient}
-                  addressBook={addressBook}
-                  isLoadingAddressBook={isLoadingAddressBook}
+                <ContactInfoSection
+                  title="Sender Information"
+                  contactInfo={formData.sender}
+                  onUpdateField={updateSenderField}
+                  onUseMyInfo={handleUseSenderMyInfo}
+                  onSelectFromAddressBook={handleSelectSenderFromAddressBook}
                   onSearchAddressBook={handleSearchAddressBook}
-                  onSelectFromAddressBook={handleSelectRecipientFromAddressBook}
-                  isRequired={formData.deliveryLocations.length > 1}
-                  totalDeliveries={formData.deliveryLocations.length}
+                  canUseMyInfo={true}
+                  useMyInfoChecked={useSenderMyInfo}
+                  addressBookEntries={addressBook}
+                  isLoadingAddressBook={isLoadingAddressBook}
+                  role="sender"
+                  initialExpanded={true}
                 />
               </View>
-            ))}
+            </View>
 
-            {/* Add Delivery Button */}
-            {formData.deliveryLocations.length < MAX_DELIVERIES && (
-              <TouchableOpacity
-                onPress={handleAddDelivery}
-                style={styles.addButton}
-              >
-                <MaterialIcons
-                  name="add-circle"
-                  size={rs(24)}
-                  color="#007AFF"
-                />
-                <Text style={styles.addButtonText}>Add Another Delivery</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+            {/* Delivery Locations */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  <MaterialCommunityIcons
+                    name="truck-delivery"
+                    size={rs(18)}
+                    color="#00B624"
+                  />{" "}
+                  Delivery Locations
+                </Text>
+                <Text style={styles.deliveryCount}>
+                  {formData.deliveryLocations.length} / {MAX_DELIVERIES}
+                </Text>
+              </View>
 
-          <UrgentToggle
-            isUrgent={formData.isUrgent}
-            urgencyFee={formData.urgencyFee}
-            disabled={isUrgentDisabled}
-            onToggle={handleUrgentToggle}
-          />
+              {formData.deliveryLocations.map((delivery, index) => (
+                <View key={index} style={styles.deliveryCard}>
+                  <View style={styles.deliveryHeader}>
+                    {formData.deliveryLocations.length > 1 && (
+                      <Text style={styles.deliveryNumber}>
+                        Delivery {index + 1}
+                      </Text>
+                    )}
+                    {formData.deliveryLocations.length > 1 && (
+                      <TouchableOpacity
+                        onPress={() => handleRemoveDelivery(index)}
+                        style={styles.removeButton}
+                      >
+                        <MaterialIcons
+                          name="close"
+                          size={rs(20)}
+                          color="#ff4444"
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
 
-          <NoteSection
-            noteForRider={formData.noteForRider}
-            onChangeNote={(text) => updateField("noteForRider", text)}
-          />
-        </Animated.View>
-      </ScrollView>
+                  {/* Location Input */}
+                  <View style={styles.locationInputContainer}>
+                    <Text style={styles.inputLabel}>Drop-off Address</Text>
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        style={styles.locationInput}
+                        value={delivery.address}
+                        onFocus={() => {
+                          const deliveryIndices = formData.deliveryLocations
+                            .map((d, idx) => (d.isCurrentLocation ? idx : -1))
+                            .filter((idx) => idx !== -1);
 
-      <PriceFooter
-        calculatedPrice={calculatedPrice}
-        priceBreakdown={priceBreakdown}
-        isCalculating={isCalculating}
-        isBooking={isBooking}
-        disabled={isSubmitDisabled}
-        onBook={handleBooking}
-      />
+                          router.push({
+                            pathname: "/location-search",
+                            params: {
+                              context: `delivery-${index}`,
+                              pickupIsCurrentLocation:
+                                formData.pickupIsCurrentLocation
+                                  ? "true"
+                                  : "false",
+                              deliveryIndicesUsingCurrentLocation:
+                                deliveryIndices.join(","),
+                            },
+                          });
+                        }}
+                        showSoftInputOnFocus={false}
+                        placeholder="Select drop-off location"
+                        placeholderTextColor="#999"
+                      />
+                      {delivery.address && (
+                        <TouchableOpacity
+                          onPress={() => handleClearDelivery(index)}
+                          style={styles.clearButton}
+                        >
+                          <MaterialIcons
+                            name="close"
+                            size={rs(18)}
+                            color="#666"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
 
-      <BookingOverlay visible={isBooking} />
+                  {/* Recipient Info */}
+                  <DeliveryRecipientSection
+                    deliveryIndex={index}
+                    recipient={delivery.recipient}
+                    onUpdateField={updateDeliveryRecipient}
+                    addressBook={addressBook}
+                    isLoadingAddressBook={isLoadingAddressBook}
+                    onSearchAddressBook={handleSearchAddressBook}
+                    onSelectFromAddressBook={
+                      handleSelectRecipientFromAddressBook
+                    }
+                    isRequired={formData.deliveryLocations.length > 1}
+                    totalDeliveries={formData.deliveryLocations.length}
+                  />
+                </View>
+              ))}
 
-      <UrgencyModal
-        visible={showUrgencyModal}
-        calculatedPrice={calculatedPrice}
-        urgencyFeeInput={urgencyFeeInput}
-        selectedPercentage={selectedPercentage}
-        onCancel={closeModal}
-        onConfirm={handleConfirmUrgencyFee}
-        onSelectPercentage={selectPercentage}
-        onChangeInput={setCustomInput}
-      />
+              {/* Add Delivery Button */}
+              {formData.deliveryLocations.length < MAX_DELIVERIES && (
+                <TouchableOpacity
+                  onPress={handleAddDelivery}
+                  style={styles.addButton}
+                >
+                  <MaterialIcons
+                    name="add-circle"
+                    size={rs(24)}
+                    color="#007AFF"
+                  />
+                  <Text style={styles.addButtonText}>Add Another Delivery</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <UrgentToggle
+              isUrgent={formData.isUrgent}
+              urgencyFee={formData.urgencyFee}
+              disabled={isUrgentDisabled}
+              onToggle={handleUrgentToggle}
+            />
+
+            <NoteSection
+              noteForRider={formData.noteForRider}
+              onChangeNote={(text) => updateField("noteForRider", text)}
+            />
+          </Animated.View>
+        </ScrollView>
+
+        <PriceFooter
+          calculatedPrice={calculatedPrice}
+          priceBreakdown={priceBreakdown}
+          isCalculating={isCalculating}
+          isBooking={isBooking}
+          disabled={isSubmitDisabled}
+          onBook={handleBooking}
+        />
+
+        <BookingOverlay visible={isBooking} />
+
+        <UrgencyModal
+          visible={showUrgencyModal}
+          calculatedPrice={calculatedPrice}
+          urgencyFeeInput={urgencyFeeInput}
+          selectedPercentage={selectedPercentage}
+          onCancel={closeModal}
+          onConfirm={handleConfirmUrgencyFee}
+          onSelectPercentage={selectPercentage}
+          onChangeInput={setCustomInput}
+        />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -5,7 +5,9 @@ import { useAuthFlow } from "@/redux/hooks/hooks";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  KeyboardAvoidingView,
   NativeSyntheticEvent,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -13,8 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
@@ -108,7 +110,7 @@ export default function OTPVerificationScreen() {
 
   const handleKeyPress = (
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    index: number,
+    index: number
   ) => {
     if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1].focus();
@@ -147,89 +149,95 @@ export default function OTPVerificationScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.content}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
 
-        <Text style={styles.title}>
-          Enter the 4-digit code sent to you at{" "}
-          {`+${DEFAULT_COUNTRY_CODE} ${mobile}`}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.changeNumberButton}
-          onPress={() => {
-            clearState();
-            router.replace("/(auth)/mobile-entry");
-          }}
-        >
-          <Text style={styles.changeNumberText}>
-            Changed your mobile number?
+          <Text style={styles.title}>
+            Enter the 4-digit code sent to you at{" "}
+            {`+${DEFAULT_COUNTRY_CODE} ${mobile}`}
           </Text>
-        </TouchableOpacity>
 
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => (inputRefs.current[index] = ref as any)}
+          <TouchableOpacity
+            style={styles.changeNumberButton}
+            onPress={() => {
+              clearState();
+              router.replace("/(auth)/mobile-entry");
+            }}
+          >
+            <Text style={styles.changeNumberText}>
+              Changed your mobile number?
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => (inputRefs.current[index] = ref as any)}
+                style={[
+                  styles.otpInput,
+                  digit && styles.otpInputFilled,
+                  error && styles.otpInputError,
+                  isExpired && styles.otpInputExpired,
+                ]}
+                value={digit}
+                onChangeText={(value) => handleOtpChange(value, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="numeric"
+                // maxLength={1}
+                textAlign="center"
+              />
+            ))}
+          </View>
+          <Text style={styles.otpTextError}>{error}</Text>
+
+          <TouchableOpacity
+            style={[styles.resendButton, timer > 0 && styles.disabledButton]}
+            disabled={timer > 0 || isLogin}
+            onPress={async () => resendOtp()}
+          >
+            <Text
               style={[
-                styles.otpInput,
-                digit && styles.otpInputFilled,
-                error && styles.otpInputError,
-                isExpired && styles.otpInputExpired,
+                styles.resendText,
+                (timer > 0 || isLogin) && { opacity: 0.5 },
               ]}
-              value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
-              onKeyPress={(e) => handleKeyPress(e, index)}
-              keyboardType="numeric"
-              // maxLength={1}
-              textAlign="center"
-            />
-          ))}
+            >
+              {timer > 0
+                ? `Resend code via SMS (${formatTime(timer)})`
+                : "Resend code via SMS"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              !otp.every((digit) => digit !== "") && styles.disabledButton,
+            ]}
+            onPress={() => consumeOtp()}
+            disabled={!otp.every((digit) => digit !== "")}
+          >
+            <Text
+              style={[
+                styles.nextText,
+                (!otp.every((digit) => digit !== "") || isLogin) &&
+                  styles.disabledText,
+              ]}
+            >
+              {isLogin ? "validating" : "Next"} →
+            </Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.otpTextError}>{error}</Text>
-
-        <TouchableOpacity
-          style={[styles.resendButton, timer > 0 && styles.disabledButton]}
-          disabled={timer > 0 || isLogin}
-          onPress={async () => resendOtp()}
-        >
-          <Text
-            style={[
-              styles.resendText,
-              (timer > 0 || isLogin) && { opacity: 0.5 },
-            ]}
-          >
-            {timer > 0
-              ? `Resend code via SMS (${formatTime(timer)})`
-              : "Resend code via SMS"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            !otp.every((digit) => digit !== "") && styles.disabledButton,
-          ]}
-          onPress={() => consumeOtp()}
-          disabled={!otp.every((digit) => digit !== "")}
-        >
-          <Text
-            style={[
-              styles.nextText,
-              (!otp.every((digit) => digit !== "") || isLogin) &&
-                styles.disabledText,
-            ]}
-          >
-            {isLogin ? "validating" : "Next"} →
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

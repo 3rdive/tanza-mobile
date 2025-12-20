@@ -226,207 +226,220 @@ export default function CompleteInfoScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      ></KeyboardAvoidingView>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Complete your profile</Text>
-        <Text style={styles.subtitle}>
-          Let us know how to properly address you and secure your account
-          &middot;{" "}
-          <Text
-            style={{
-              color: "blue",
-            }}
-            onPress={() => router.back()}
-          >
-            {email}
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Complete your profile</Text>
+          <Text style={styles.subtitle}>
+            Let us know how to properly address you and secure your account
+            &middot;{" "}
+            <Text
+              style={{
+                color: "blue",
+              }}
+              onPress={() => router.back()}
+            >
+              {email}
+            </Text>
           </Text>
-        </Text>
-        {/* Profile picture avatar + upload */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Profile Photo</Text>
-          <View style={styles.avatarRow}>
-            <View style={styles.avatarWrapper}>
-              {profilePic ? (
-                <Image
-                  source={{ uri: profilePic }}
-                  style={styles.avatar}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                  <Text style={styles.avatarPlaceholderText}>
-                    {fullName.trim().split(/\s+/)[0]?.[0]?.toUpperCase() || "P"}
-                    {fullName.trim().split(/\s+/)[1]?.[0]?.toUpperCase() || ""}
-                  </Text>
-                </View>
+          {/* Profile picture avatar + upload */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Profile Photo</Text>
+            <View style={styles.avatarRow}>
+              <View style={styles.avatarWrapper}>
+                {profilePic ? (
+                  <Image
+                    source={{ uri: profilePic }}
+                    style={styles.avatar}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                    <Text style={styles.avatarPlaceholderText}>
+                      {fullName.trim().split(/\s+/)[0]?.[0]?.toUpperCase() ||
+                        "P"}
+                      {fullName.trim().split(/\s+/)[1]?.[0]?.toUpperCase() ||
+                        ""}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.selectPhotoBtn}
+                onPress={async () => {
+                  try {
+                    const perm =
+                      await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (perm.status !== "granted") {
+                      Alert.alert(
+                        "Permission needed",
+                        "We need access to your photos to select a profile picture."
+                      );
+                      return;
+                    }
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 0.8,
+                    });
+                    if (result.canceled) return;
+                    const uri = result.assets?.[0]?.uri;
+                    if (!uri) return;
+                    // Optimistic: show local image while uploading
+                    // We'll upload and replace with the server URL when done
+                    let uploadingAlertShown = false;
+                    const timer = setTimeout(() => {
+                      uploadingAlertShown = true;
+                    }, 400);
+                    const resp = await storageService.upload({
+                      uri,
+                      type: "image/jpeg",
+                    });
+                    clearTimeout(timer);
+                    if (resp?.success) {
+                      const url = (resp.data as any)?.url;
+                      if (url) setProfilePic(url);
+                    } else {
+                      Alert.alert(
+                        "Upload failed",
+                        resp?.message || "Unable to upload image"
+                      );
+                    }
+                  } catch (e: any) {
+                    Alert.alert(
+                      "Upload Error",
+                      e?.response?.data?.message ||
+                        e?.message ||
+                        "Unable to upload image"
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.selectPhotoBtnText}>Select Photo</Text>
+              </TouchableOpacity>
+            </View>
+            {/*<Text style={styles.helperText}>Image will be uploaded and linked to your account.</Text>*/}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Full name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your full name (first and last)"
+              value={fullName}
+              onChangeText={setFullName}
+              autoCapitalize="words"
+            />
+            <Text style={styles.helperText}>
+              Enter at least first and last name
+            </Text>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Create a password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <Text style={styles.helperText}>Minimum 8 characters</Text>
+          </View>
+
+          {/* Address input with autocomplete and current location */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Your Address</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Search address (e.g., Victoria Island)"
+                value={addressText}
+                onFocus={() =>
+                  router.push({
+                    pathname: "/location-search",
+                    params: { context: "usersAddress" },
+                  })
+                }
+                showSoftInputOnFocus={false}
+                caretHidden
+                autoCapitalize="sentences"
+              />
+              {!!addressText && (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear address"
+                  onPress={() => {
+                    setAddressText("");
+                    setAddressCoords(null);
+                    setShowAddrSuggestions(false);
+                  }}
+                  style={styles.clearBtn}
+                >
+                  <MaterialIcons name="cancel" size={24} color="red" />
+                </TouchableOpacity>
               )}
             </View>
             <TouchableOpacity
-              style={styles.selectPhotoBtn}
-              onPress={async () => {
-                try {
-                  const perm =
-                    await ImagePicker.requestMediaLibraryPermissionsAsync();
-                  if (perm.status !== "granted") {
-                    Alert.alert(
-                      "Permission needed",
-                      "We need access to your photos to select a profile picture."
-                    );
-                    return;
-                  }
-                  const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                    allowsEditing: true,
-                    aspect: [1, 1],
-                    quality: 0.8,
-                  });
-                  if (result.canceled) return;
-                  const uri = result.assets?.[0]?.uri;
-                  if (!uri) return;
-                  // Optimistic: show local image while uploading
-                  // We'll upload and replace with the server URL when done
-                  let uploadingAlertShown = false;
-                  const timer = setTimeout(() => {
-                    uploadingAlertShown = true;
-                  }, 400);
-                  const resp = await storageService.upload({
-                    uri,
-                    type: "image/jpeg",
-                  });
-                  clearTimeout(timer);
-                  if (resp?.success) {
-                    const url = (resp.data as any)?.url;
-                    if (url) setProfilePic(url);
-                  } else {
-                    Alert.alert(
-                      "Upload failed",
-                      resp?.message || "Unable to upload image"
-                    );
-                  }
-                } catch (e: any) {
-                  Alert.alert(
-                    "Upload Error",
-                    e?.response?.data?.message ||
-                      e?.message ||
-                      "Unable to upload image"
-                  );
-                }
-              }}
+              onPress={useCurrentLocation}
+              style={[styles.useLocationBtn]}
             >
-              <Text style={styles.selectPhotoBtnText}>Select Photo</Text>
+              <Text style={styles.useLocationBtnText}>
+                Use current location
+              </Text>
             </TouchableOpacity>
-          </View>
-          {/*<Text style={styles.helperText}>Image will be uploaded and linked to your account.</Text>*/}
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Full name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your full name (first and last)"
-            value={fullName}
-            onChangeText={setFullName}
-            autoCapitalize="words"
-          />
-          <Text style={styles.helperText}>
-            Enter at least first and last name
-          </Text>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Create a password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
-          <Text style={styles.helperText}>Minimum 8 characters</Text>
-        </View>
-
-        {/* Address input with autocomplete and current location */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Your Address</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="Search address (e.g., Victoria Island)"
-              value={addressText}
-              onFocus={() =>
-                router.push({
-                  pathname: "/location-search",
-                  params: { context: "usersAddress" },
-                })
-              }
-              showSoftInputOnFocus={false}
-              caretHidden
-              autoCapitalize="sentences"
-            />
-            {!!addressText && (
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Clear address"
-                onPress={() => {
-                  setAddressText("");
-                  setAddressCoords(null);
-                  setShowAddrSuggestions(false);
-                }}
-                style={styles.clearBtn}
-              >
-                <MaterialIcons name="cancel" size={24} color="red" />
-              </TouchableOpacity>
+            {showAddrSuggestions && addrSuggestions.length > 0 && (
+              <View style={styles.suggestionBox}>
+                {addrSuggestions.map((s) => (
+                  <TouchableOpacity
+                    key={s.id}
+                    style={styles.suggestionItem}
+                    onPress={() => selectAddress(s)}
+                  >
+                    <Text style={styles.suggestionTitle}>{s.title}</Text>
+                    {!!s.subtitle && (
+                      <Text style={styles.suggestionSubtitle}>
+                        {s.subtitle}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             )}
           </View>
+
           <TouchableOpacity
-            onPress={useCurrentLocation}
-            style={[styles.useLocationBtn]}
+            style={[
+              styles.completeButton,
+              !isFormValid() && styles.disabledButton,
+            ]}
+            onPress={handleComplete}
+            disabled={!isFormValid()}
           >
-            <Text style={styles.useLocationBtnText}>Use current location</Text>
+            {isLoading ? (
+              <ActivityIndicator />
+            ) : (
+              <Text
+                style={[
+                  styles.completeText,
+                  !isFormValid() && styles.disabledText,
+                ]}
+              >
+                Complete Setup
+              </Text>
+            )}
           </TouchableOpacity>
-
-          {showAddrSuggestions && addrSuggestions.length > 0 && (
-            <View style={styles.suggestionBox}>
-              {addrSuggestions.map((s) => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={styles.suggestionItem}
-                  onPress={() => selectAddress(s)}
-                >
-                  <Text style={styles.suggestionTitle}>{s.title}</Text>
-                  {!!s.subtitle && (
-                    <Text style={styles.suggestionSubtitle}>{s.subtitle}</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.completeButton,
-            !isFormValid() && styles.disabledButton,
-          ]}
-          onPress={handleComplete}
-          disabled={!isFormValid()}
-        >
-          {isLoading ? (
-            <ActivityIndicator />
-          ) : (
-            <Text
-              style={[
-                styles.completeText,
-                !isFormValid() && styles.disabledText,
-              ]}
-            >
-              Complete Setup
-            </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

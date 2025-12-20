@@ -12,6 +12,8 @@ import type { JSX } from "react"; // Declare JSX variable
 import { useEffect, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,8 +21,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -66,7 +68,7 @@ export default function EditProfileScreen(): JSX.Element {
 
   const initialUsersAddress = (user as any)?.usersAddress || null;
   const [addressText, setAddressText] = useState<string>(
-    initialUsersAddress?.name || "",
+    initialUsersAddress?.name || ""
   );
   const [addressCoords, setAddressCoords] = useState<{
     lat: number;
@@ -76,13 +78,13 @@ export default function EditProfileScreen(): JSX.Element {
       typeof initialUsersAddress.lat === "number" &&
       typeof initialUsersAddress.lon === "number"
       ? { lat: initialUsersAddress.lat, lon: initialUsersAddress.lon }
-      : null,
+      : null
   );
 
   const dispatch = useAppDispatch();
   const isFocused = useIsFocused();
   const selected = useAppSelector(
-    (s) => (s as any).locationSearch?.selected || null,
+    (s) => (s as any).locationSearch?.selected || null
   );
   const { latitude, longitude, locationAddress } = useDeviceLocation();
 
@@ -177,7 +179,7 @@ export default function EditProfileScreen(): JSX.Element {
     } catch (e: any) {
       Alert.alert(
         "Location Error",
-        e?.message || "Unable to fetch current location",
+        e?.message || "Unable to fetch current location"
       );
     }
   };
@@ -262,7 +264,7 @@ export default function EditProfileScreen(): JSX.Element {
 
   const updateFormData = (
     field: keyof EditProfileFormData,
-    value: string,
+    value: string
   ): void => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -273,229 +275,239 @@ export default function EditProfileScreen(): JSX.Element {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          disabled={isLoading}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={isLoading}
-          style={[styles.saveButton, isLoading && styles.disabledButton]}
-        >
-          <Text
-            style={[styles.saveButtonText, isLoading && styles.disabledText]}
-          >
-            {isLoading ? "Saving..." : "Save"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Profile Picture Section */}
-        <View style={styles.profilePictureSection}>
-          <View style={styles.avatarContainer}>
-            {Boolean((user as any)?.profilePic) ? (
-              <Image
-                source={{ uri: (user as any)?.profilePic as string }}
-                style={styles.avatarFallback}
-                contentFit="cover"
-              />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarText}>
-                  {formData.firstName[0]?.toUpperCase() || "J"}
-                  {formData.lastName[0]?.toUpperCase() || "D"}
-                </Text>
-              </View>
-            )}
-          </View>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={styles.changePhotoButton}
+            style={styles.backButton}
+            onPress={() => router.back()}
             disabled={isLoading}
-            onPress={async () => {
-              try {
-                const perm =
-                  await ImagePicker.requestMediaLibraryPermissionsAsync();
-                if (perm.status !== "granted") {
-                  Alert.alert(
-                    "Permission needed",
-                    "We need access to your photos to change your profile picture.",
-                  );
-                  return;
-                }
-                const result = await ImagePicker.launchImageLibraryAsync({
-                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: true,
-                  aspect: [1, 1],
-                  quality: 0.8,
-                });
-                if (result.canceled) return;
-                const uri = result.assets?.[0]?.uri;
-                if (!uri) return;
-                const resp = await storageService.upload({
-                  uri,
-                  type: "image/jpeg",
-                });
-                if (resp?.success) {
-                  const url = (resp.data as any)?.url as string;
-                  if (url) {
-                    const update = await userService.updateProfile({
-                      profilePic: url,
-                    });
-                    if (update?.success && update.data) {
-                      await setUser({
-                        access_token: access_token || null,
-                        user: update.data as any,
-                      });
-                    } else {
-                      Alert.alert(
-                        "Update failed",
-                        update?.message || "Unable to update profile photo",
-                      );
-                    }
-                  }
-                } else {
-                  Alert.alert(
-                    "Upload failed",
-                    resp?.message || "Unable to upload image",
-                  );
-                }
-              } catch (e: any) {
-                Alert.alert(
-                  "Error",
-                  e?.response?.data?.message ||
-                    e?.message ||
-                    "Unable to change photo",
-                );
-              }
-            }}
           >
-            <Text style={styles.changePhotoText}>Change Photo</Text>
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isLoading}
+            style={[styles.saveButton, isLoading && styles.disabledButton]}
+          >
+            <Text
+              style={[styles.saveButtonText, isLoading && styles.disabledText]}
+            >
+              {isLoading ? "Saving..." : "Save"}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Form Fields */}
-        <View style={styles.formSection}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>First Name</Text>
-            <TextInput
-              style={[styles.input, errors.firstName && styles.errorInput]}
-              value={formData.firstName}
-              onChangeText={(text) => updateFormData("firstName", text)}
-              placeholder="Enter your first name"
-              keyboardType="default"
-              autoCapitalize="words"
-              editable={!isLoading}
-            />
-            {errors.firstName && (
-              <Text style={styles.errorText}>{errors.firstName}</Text>
-            )}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Last Name</Text>
-            <TextInput
-              style={[styles.input, errors.lastName && styles.errorInput]}
-              value={formData.lastName}
-              onChangeText={(text) => updateFormData("lastName", text)}
-              placeholder="Enter your last name"
-              keyboardType="default"
-              autoCapitalize="words"
-              editable={!isLoading}
-            />
-            {errors.lastName && (
-              <Text style={styles.errorText}>{errors.lastName}</Text>
-            )}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.errorInput]}
-              value={formData.email}
-              onChangeText={(text) => updateFormData("email", text)}
-              placeholder="Enter your email address"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-            />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
-            )}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={[styles.input, errors.phoneNumber && styles.errorInput]}
-              value={formData.phoneNumber}
-              onChangeText={(text) => updateFormData("phoneNumber", text)}
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-              autoCapitalize="sentences"
-              editable={!isLoading}
-            />
-            {errors.phoneNumber && (
-              <Text style={styles.errorText}>{errors.phoneNumber}</Text>
-            )}
-          </View>
-
-          {/* Address Field with full-screen search */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Your Address</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={addressText}
-                placeholder="Search address (e.g., Victoria Island)"
-                onFocus={() =>
-                  router.push({
-                    pathname: "/location-search",
-                    params: { context: "usersAddress" },
-                  })
-                }
-                showSoftInputOnFocus={false}
-                caretHidden
-              />
-              {!!addressText && (
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear address"
-                  onPress={() => {
-                    setAddressText("");
-                    setAddressCoords(null);
-                  }}
-                  style={styles.clearBtn}
-                >
-                  <MaterialIcons name="cancel" size={24} color="red" />
-                </TouchableOpacity>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Profile Picture Section */}
+          <View style={styles.profilePictureSection}>
+            <View style={styles.avatarContainer}>
+              {Boolean((user as any)?.profilePic) ? (
+                <Image
+                  source={{ uri: (user as any)?.profilePic as string }}
+                  style={styles.avatarFallback}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarText}>
+                    {formData.firstName[0]?.toUpperCase() || "J"}
+                    {formData.lastName[0]?.toUpperCase() || "D"}
+                  </Text>
+                </View>
               )}
             </View>
             <TouchableOpacity
-              onPress={useCurrentLocation}
-              style={styles.useLocationBtn}
+              style={styles.changePhotoButton}
+              disabled={isLoading}
+              onPress={async () => {
+                try {
+                  const perm =
+                    await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (perm.status !== "granted") {
+                    Alert.alert(
+                      "Permission needed",
+                      "We need access to your photos to change your profile picture."
+                    );
+                    return;
+                  }
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.8,
+                  });
+                  if (result.canceled) return;
+                  const uri = result.assets?.[0]?.uri;
+                  if (!uri) return;
+                  const resp = await storageService.upload({
+                    uri,
+                    type: "image/jpeg",
+                  });
+                  if (resp?.success) {
+                    const url = (resp.data as any)?.url as string;
+                    if (url) {
+                      const update = await userService.updateProfile({
+                        profilePic: url,
+                      });
+                      if (update?.success && update.data) {
+                        await setUser({
+                          access_token: access_token || null,
+                          user: update.data as any,
+                        });
+                      } else {
+                        Alert.alert(
+                          "Update failed",
+                          update?.message || "Unable to update profile photo"
+                        );
+                      }
+                    }
+                  } else {
+                    Alert.alert(
+                      "Upload failed",
+                      resp?.message || "Unable to upload image"
+                    );
+                  }
+                } catch (e: any) {
+                  Alert.alert(
+                    "Error",
+                    e?.response?.data?.message ||
+                      e?.message ||
+                      "Unable to change photo"
+                  );
+                }
+              }}
             >
-              <Text style={styles.useLocationBtnText}>
-                Use current location
-              </Text>
+              <Text style={styles.changePhotoText}>Change Photo</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Info Section */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoText}>
-            Your profile information is used to personalize your experience and
-            for account verification purposes.
-          </Text>
-        </View>
-      </ScrollView>
+          {/* Form Fields */}
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>First Name</Text>
+              <TextInput
+                style={[styles.input, errors.firstName && styles.errorInput]}
+                value={formData.firstName}
+                onChangeText={(text) => updateFormData("firstName", text)}
+                placeholder="Enter your first name"
+                keyboardType="default"
+                autoCapitalize="words"
+                editable={!isLoading}
+              />
+              {errors.firstName && (
+                <Text style={styles.errorText}>{errors.firstName}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Last Name</Text>
+              <TextInput
+                style={[styles.input, errors.lastName && styles.errorInput]}
+                value={formData.lastName}
+                onChangeText={(text) => updateFormData("lastName", text)}
+                placeholder="Enter your last name"
+                keyboardType="default"
+                autoCapitalize="words"
+                editable={!isLoading}
+              />
+              {errors.lastName && (
+                <Text style={styles.errorText}>{errors.lastName}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={[styles.input, errors.email && styles.errorInput]}
+                value={formData.email}
+                onChangeText={(text) => updateFormData("email", text)}
+                placeholder="Enter your email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isLoading}
+              />
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={[styles.input, errors.phoneNumber && styles.errorInput]}
+                value={formData.phoneNumber}
+                onChangeText={(text) => updateFormData("phoneNumber", text)}
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+                autoCapitalize="sentences"
+                editable={!isLoading}
+              />
+              {errors.phoneNumber && (
+                <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+              )}
+            </View>
+
+            {/* Address Field with full-screen search */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Your Address</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  value={addressText}
+                  placeholder="Search address (e.g., Victoria Island)"
+                  onFocus={() =>
+                    router.push({
+                      pathname: "/location-search",
+                      params: { context: "usersAddress" },
+                    })
+                  }
+                  showSoftInputOnFocus={false}
+                  caretHidden
+                />
+                {!!addressText && (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear address"
+                    onPress={() => {
+                      setAddressText("");
+                      setAddressCoords(null);
+                    }}
+                    style={styles.clearBtn}
+                  >
+                    <MaterialIcons name="cancel" size={24} color="red" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={useCurrentLocation}
+                style={styles.useLocationBtn}
+              >
+                <Text style={styles.useLocationBtnText}>
+                  Use current location
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Info Section */}
+          <View style={styles.infoSection}>
+            <Text style={styles.infoText}>
+              Your profile information is used to personalize your experience
+              and for account verification purposes.
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

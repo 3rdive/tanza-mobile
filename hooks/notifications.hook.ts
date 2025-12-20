@@ -1,11 +1,11 @@
-import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
-import Constants from "expo-constants";
-import { useEffect, useRef, useState } from "react";
-import { Platform } from "expo-modules-core";
 import { userService } from "@/lib/api";
 import { StorageMechanics } from "@/lib/storage-mechanics";
+import Constants from "expo-constants";
+import * as Device from "expo-device";
+import { Platform } from "expo-modules-core";
+import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 
 export interface PushNotificationState {
   notification?: Notifications.Notification;
@@ -81,7 +81,7 @@ export const usePushNotification = (): PushNotificationState => {
       return token;
     } else {
       console.log(
-        "ERROR: Push notifications are not supported on iOS simulators",
+        "ERROR: Push notifications are not supported on iOS simulators"
       );
     }
   };
@@ -119,12 +119,12 @@ export const usePushNotification = (): PushNotificationState => {
       });
 
     notificationListener.current =
-      Notifications.addNotificationReceivedListener((notification) => {
+      Notifications?.addNotificationReceivedListener((notification) => {
         setNotification(notification);
       });
 
     responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
+      Notifications?.addNotificationResponseReceivedListener((response) => {
         console.log("response from click", JSON.stringify(response));
         const data = response.notification.request.content.data;
         if (data?.route) {
@@ -134,13 +134,11 @@ export const usePushNotification = (): PushNotificationState => {
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(
-          notificationListener.current,
-        );
+        notificationListener.current?.remove();
       }
 
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current?.remove();
       }
     };
   }, []);

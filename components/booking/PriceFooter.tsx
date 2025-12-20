@@ -194,10 +194,6 @@ PriceFooter.displayName = "PriceFooter";
 
 const styles = StyleSheet.create({
   priceContainer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: "#fff",
     paddingHorizontal: rs(16),
     paddingVertical: rs(12),

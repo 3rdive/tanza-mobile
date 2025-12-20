@@ -5,14 +5,16 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
@@ -54,66 +56,72 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>Reset your password</Text>
-          <Text style={styles.subtitle}>
-            Enter your Mobile and we&#39;ll send you a code to reset your
-            password
-          </Text>
-        </View>
-
-        <View style={styles.phoneContainer}>
-          <TouchableOpacity style={styles.countrySelector}>
-            <Text style={styles.flag}>🇳🇬</Text>
-            <Text style={styles.countryCode}>{}</Text>
-            <Text style={styles.dropdown}>▼</Text>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.content}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
 
-          <TextInput
-            style={styles.phoneInput}
-            placeholder="9153065907"
-            value={mobile}
-            onChangeText={setMobile}
-            keyboardType="phone-pad"
-            maxLength={10}
-          />
-        </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Reset your password</Text>
+            <Text style={styles.subtitle}>
+              Enter your Mobile and we&#39;ll send you a code to reset your
+              password
+            </Text>
+          </View>
 
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            mobile.length != 10 && styles.disabledButton,
-          ]}
-          onPress={handleSendCode}
-          disabled={mobile.length != 10}
-        >
-          <Text
+          <View style={styles.phoneContainer}>
+            <TouchableOpacity style={styles.countrySelector}>
+              <Text style={styles.flag}>🇳🇬</Text>
+              <Text style={styles.countryCode}>{}</Text>
+              <Text style={styles.dropdown}>▼</Text>
+            </TouchableOpacity>
+
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="9153065907"
+              value={mobile}
+              onChangeText={setMobile}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+          </View>
+
+          <TouchableOpacity
             style={[
-              styles.sendText,
-              mobile.length != 10 && styles.disabledText,
+              styles.sendButton,
+              mobile.length != 10 && styles.disabledButton,
             ]}
+            onPress={handleSendCode}
+            disabled={mobile.length != 10}
           >
-            Send Reset Code
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.sendText,
+                mobile.length != 10 && styles.disabledText,
+              ]}
+            >
+              Send Reset Code
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.backToSignInButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backToSignInText}>
-            Remember your password? Sign in
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.backToSignInButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backToSignInText}>
+              Remember your password? Sign in
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

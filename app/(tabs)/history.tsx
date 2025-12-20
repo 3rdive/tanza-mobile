@@ -323,6 +323,22 @@ export default function TransactionHistoryScreen(): JSX.Element {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with Back Button */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.push("/(tabs)")}
+        >
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={rs(24)}
+            color="#000"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Transaction History</Text>
+        <View style={styles.placeholder} />
+      </View>
+
       {/* Filter Buttons */}
       <View style={styles.filterContainer}>
         <FilterButton type="all" label="All" />
@@ -370,7 +386,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: rs(20),
-    paddingVertical: rs(16),
+    paddingVertical: rs(6),
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",

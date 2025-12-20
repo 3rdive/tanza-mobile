@@ -18,8 +18,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -198,7 +198,7 @@ export default function TransactionDetail(): JSX.Element {
               if (tracking && tracking.length > 0) {
                 // Use the most recent tracking status by createdAt
                 const last = tracking.reduce((a, b) =>
-                  new Date(a.createdAt) > new Date(b.createdAt) ? a : b,
+                  new Date(a.createdAt) > new Date(b.createdAt) ? a : b
                 );
                 derived = String(last.status);
               } else if ((apiTx as any)?.order?.orderStatus) {
@@ -231,7 +231,7 @@ export default function TransactionDetail(): JSX.Element {
             if (tracking && tracking.length > 0) {
               // Use the most recent tracking status by createdAt
               const last = tracking.reduce((a, b) =>
-                new Date(a.createdAt) > new Date(b.createdAt) ? a : b,
+                new Date(a.createdAt) > new Date(b.createdAt) ? a : b
               );
               derived = String(last.status);
             } else if ((apiTx as any)?.order?.orderStatus) {
@@ -305,17 +305,10 @@ export default function TransactionDetail(): JSX.Element {
               <Text style={styles.detailValue}>{order.eta}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Delivery Fee</Text>
-              <Text style={styles.detailValue}>
-                ₦{Number(order.deliveryFee || 0).toLocaleString()}
-              </Text>
+              <Text style={styles.detailLabel}>Distance</Text>
+              <Text style={styles.detailValue}>{order.distanceInKm} KM</Text>
             </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Service Charge</Text>
-              <Text style={styles.detailValue}>
-                ₦{Number(order.serviceChargeAmount || 0).toLocaleString()}
-              </Text>
-            </View>
+
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Total</Text>
               <Text style={styles.detailValue}>

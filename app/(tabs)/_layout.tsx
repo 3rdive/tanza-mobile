@@ -1,6 +1,6 @@
+import { usePushNotification } from "@/hooks/notifications.hook";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { usePushNotification } from "@/hooks/notifications.hook";
 
 export default function TabLayout() {
   const { expoPushToken } = usePushNotification();
@@ -40,6 +40,7 @@ export default function TabLayout() {
         name="history"
         options={{
           title: "History",
+          tabBarStyle: { display: "none" },
           tabBarIcon: ({ focused }) => (
             <MaterialCommunityIcons
               name="book-outline"

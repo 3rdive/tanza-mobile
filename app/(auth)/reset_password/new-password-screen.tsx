@@ -5,14 +5,17 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
@@ -39,7 +42,7 @@ export default function NewPasswordScreen() {
     if (!isFormValid) {
       Alert.alert(
         "Invalid Password",
-        "Please check your password requirements",
+        "Please check your password requirements"
       );
       return;
     }
@@ -60,7 +63,7 @@ export default function NewPasswordScreen() {
               text: "Sign In",
               onPress: () => router.replace("/(auth)/sign-in"),
             },
-          ],
+          ]
         );
       } else {
         Alert.alert("Failed", resp.message || "Unable to reset password");
@@ -76,118 +79,141 @@ export default function NewPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>Create new password</Text>
-          <Text style={styles.subtitle}>
-            Create a strong password for {mobile}
-          </Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          {/* New Password */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>New Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={[
-                  styles.passwordInput,
-                  password && !isPasswordValid && styles.errorInput,
-                ]}
-                placeholder="Enter new password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoFocus={true}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Text style={styles.eyeText}>{showPassword ? "👁️" : "👁️‍🗨️"}</Text>
-              </TouchableOpacity>
-            </View>
-            <Text
-              style={[
-                styles.helperText,
-                password && !isPasswordValid && styles.errorHelperText,
-              ]}
+          <View style={styles.content}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
             >
-              Minimum 6 characters
-            </Text>
-          </View>
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
 
-          {/* Confirm Password */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={[
-                  styles.passwordInput,
-                  confirmPassword && !doPasswordsMatch && styles.errorInput,
-                ]}
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                <Text style={styles.eyeText}>
-                  {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+            <View style={styles.header}>
+              <Text style={styles.title}>Create new password</Text>
+              <Text style={styles.subtitle}>
+                Create a strong password for {mobile}
+              </Text>
+            </View>
+
+            <View style={styles.formContainer}>
+              {/* New Password */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>New Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      password && !isPasswordValid && styles.errorInput,
+                    ]}
+                    placeholder="Enter new password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoFocus={true}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Text style={styles.eyeText}>
+                      {showPassword ? "👁️" : "👁️‍🗨️"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text
+                  style={[
+                    styles.helperText,
+                    password && !isPasswordValid && styles.errorHelperText,
+                  ]}
+                >
+                  Minimum 6 characters
                 </Text>
-              </TouchableOpacity>
-            </View>
-            {confirmPassword && !doPasswordsMatch && (
-              <Text style={styles.errorHelperText}>Passwords do not match</Text>
-            )}
-          </View>
+              </View>
 
-          {/* Password Requirements */}
-          <View style={styles.requirementsContainer}>
-            <Text style={styles.requirementsTitle}>Password must contain:</Text>
-            <View style={styles.requirement}>
-              <Text
-                style={[
-                  styles.requirementBullet,
-                  isPasswordValid && styles.requirementMet,
-                ]}
-              >
-                •
-              </Text>
-              <Text
-                style={[
-                  styles.requirementText,
-                  isPasswordValid && styles.requirementMet,
-                ]}
-              >
-                At least 8 characters
-              </Text>
-            </View>
-          </View>
-        </View>
+              {/* Confirm Password */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      confirmPassword && !doPasswordsMatch && styles.errorInput,
+                    ]}
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Text style={styles.eyeText}>
+                      {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {confirmPassword && !doPasswordsMatch && (
+                  <Text style={styles.errorHelperText}>
+                    Passwords do not match
+                  </Text>
+                )}
+              </View>
 
-        <TouchableOpacity
-          style={[styles.resetButton, !isFormValid && styles.disabledButton]}
-          onPress={handleResetPassword}
-          disabled={!isFormValid}
-        >
-          <Text style={[styles.resetText, !isFormValid && styles.disabledText]}>
-            Reset Password
-          </Text>
-        </TouchableOpacity>
-      </View>
+              {/* Password Requirements */}
+              <View style={styles.requirementsContainer}>
+                <Text style={styles.requirementsTitle}>
+                  Password must contain:
+                </Text>
+                <View style={styles.requirement}>
+                  <Text
+                    style={[
+                      styles.requirementBullet,
+                      isPasswordValid && styles.requirementMet,
+                    ]}
+                  >
+                    •
+                  </Text>
+                  <Text
+                    style={[
+                      styles.requirementText,
+                      isPasswordValid && styles.requirementMet,
+                    ]}
+                  >
+                    At least 8 characters
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.resetButton,
+                !isFormValid && styles.disabledButton,
+              ]}
+              onPress={handleResetPassword}
+              disabled={!isFormValid}
+            >
+              <Text
+                style={[styles.resetText, !isFormValid && styles.disabledText]}
+              >
+                Reset Password
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

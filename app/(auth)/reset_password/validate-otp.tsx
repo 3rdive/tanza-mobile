@@ -4,18 +4,20 @@ import { usePasswordResetFlow } from "@/redux/hooks/hooks";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   NativeSyntheticEvent,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TextInputKeyPressEventData,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
@@ -85,7 +87,7 @@ export default function ValidateOtp() {
 
   const handleKeyPress = (
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    index: number,
+    index: number
   ) => {
     if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
       (inputRefs.current[index - 1] as any).focus();
@@ -137,7 +139,7 @@ export default function ValidateOtp() {
         setTimer(60);
         Alert.alert(
           "Code Sent",
-          "A new verification code has been sent to your phone.",
+          "A new verification code has been sent to your phone."
         );
       } else {
         setError(resp.message || "Failed to send code. Please try again.");
@@ -161,77 +163,86 @@ export default function ValidateOtp() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.content}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
 
-        <View style={styles.header}>
-          <Text style={styles.title}>Enter verification code</Text>
-          <Text style={styles.subtitle}>
-            We sent a 4-digit code to {mobile}
-          </Text>
-        </View>
-
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => (inputRefs.current[index] = ref as any)}
-              style={[
-                styles.otpInput,
-                digit && styles.otpInputFilled,
-                error && styles.otpInputError,
-              ]}
-              value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
-              onKeyPress={(e) => handleKeyPress(e, index)}
-              keyboardType="numeric"
-              // maxLength={1}
-              textAlign="center"
-              editable={!isVerifying}
-            />
-          ))}
-        </View>
-
-        {isVerifying && (
-          <ActivityIndicator
-            size="large"
-            color="#00B624"
-            style={{ marginBottom: rs(20) }}
-          />
-        )}
-
-        {/* Error Message */}
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        {/* Resend */}
-        <View style={styles.resendContainer}>
-          {timer > 0 ? (
-            <Text style={styles.timerText}>
-              Resend code in {formatTime(timer)}
+          <View style={styles.header}>
+            <Text style={styles.title}>Enter verification code</Text>
+            <Text style={styles.subtitle}>
+              We sent a 4-digit code to {mobile}
             </Text>
-          ) : (
-            <TouchableOpacity onPress={handleResendCode} disabled={isResending}>
-              <Text style={styles.resendText}>
-                {isResending ? "Sending..." : "Resend code"}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+          </View>
 
-        <TouchableOpacity
-          style={styles.changeEmailButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.changeEmailText}>
-            Wrong phone number? Change it
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => (inputRefs.current[index] = ref as any)}
+                style={[
+                  styles.otpInput,
+                  digit && styles.otpInputFilled,
+                  error && styles.otpInputError,
+                ]}
+                value={digit}
+                onChangeText={(value) => handleOtpChange(value, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                keyboardType="numeric"
+                // maxLength={1}
+                textAlign="center"
+                editable={!isVerifying}
+              />
+            ))}
+          </View>
+
+          {isVerifying && (
+            <ActivityIndicator
+              size="large"
+              color="#00B624"
+              style={{ marginBottom: rs(20) }}
+            />
+          )}
+
+          {/* Error Message */}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          {/* Resend */}
+          <View style={styles.resendContainer}>
+            {timer > 0 ? (
+              <Text style={styles.timerText}>
+                Resend code in {formatTime(timer)}
+              </Text>
+            ) : (
+              <TouchableOpacity
+                onPress={handleResendCode}
+                disabled={isResending}
+              >
+                <Text style={styles.resendText}>
+                  {isResending ? "Sending..." : "Resend code"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={styles.changeEmailButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.changeEmailText}>
+              Wrong phone number? Change it
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

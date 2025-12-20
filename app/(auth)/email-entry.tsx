@@ -5,14 +5,16 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const UI_SCALE = 0.82;
 const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
@@ -70,50 +72,56 @@ export default function EmailEntryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Enter your email address</Text>
-        <Text style={styles.subtitle}>
-          Add your email to aid in account recovery
-        </Text>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.emailInput}
-            placeholder="name@example.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {emailExists === true && (
-            <Text style={styles.errorText}>
-              This email is already registered. Please use a different email.
-            </Text>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            (!validateEmail(email) || emailExists === true || checking) &&
-              styles.disabledButton,
-          ]}
-          onPress={handleNext}
-          disabled={!validateEmail(email) || emailExists === true || checking}
-        >
-          <Text
-            style={[
-              styles.nextText,
-              (!validateEmail(email) || emailExists === true || checking) &&
-                styles.disabledText,
-            ]}
-          >
-            {checking ? "Checking…" : "Next →"}
+      <KeyboardAvoidingView
+        behavior="padding"
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={styles.content}>
+          <Text style={styles.title}>Enter your email address</Text>
+          <Text style={styles.subtitle}>
+            Add your email to aid in account recovery
           </Text>
-        </TouchableOpacity>
-      </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.emailInput}
+              placeholder="name@example.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {emailExists === true && (
+              <Text style={styles.errorText}>
+                This email is already registered. Please use a different email.
+              </Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              (!validateEmail(email) || emailExists === true || checking) &&
+                styles.disabledButton,
+            ]}
+            onPress={handleNext}
+            disabled={!validateEmail(email) || emailExists === true || checking}
+          >
+            <Text
+              style={[
+                styles.nextText,
+                (!validateEmail(email) || emailExists === true || checking) &&
+                  styles.disabledText,
+              ]}
+            >
+              {checking ? "Checking…" : "Next →"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
