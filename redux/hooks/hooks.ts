@@ -6,7 +6,7 @@ import { clearVirtualAccount, setVirtualAccount } from "@/redux/slices/virtualAc
 import { clearWallet, setWallet, setWalletBalance } from "@/redux/slices/walletSlice";
 import axios from "axios";
 import isJwtTokenExpired from "jwt-check-expiry";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from 'react-redux'
 import { clearState, setEmail, setMobile, setOtp, setPassword } from "../slices/authSlice";
 import type { AppDispatch, RootState } from '../store'
@@ -114,12 +114,16 @@ export function useWallet(){
   const balance = useAppSelector(state => state.wallet.balance);
   const loading = useAppSelector(state => state.wallet.loading);
 
+  const setWalletFn = useCallback((w: IWallet | null) => dispatch(setWallet(w)), [dispatch]);
+  const setWalletBalanceFn = useCallback((amt: number) => dispatch(setWalletBalance(amt)), [dispatch]);
+  const clearWalletFn = useCallback(() => dispatch(clearWallet()), [dispatch]);
+
   return {
     wallet: wallet as IWallet | null,
     balance,
     loading,
-    setWallet: (w: IWallet | null) => dispatch(setWallet(w)),
-    setWalletBalance: (amt: number) => dispatch(setWalletBalance(amt)),
-    clearWallet: () => dispatch(clearWallet()),
+    setWallet: setWalletFn,
+    setWalletBalance: setWalletBalanceFn,
+    clearWallet: clearWalletFn,
   }
 }

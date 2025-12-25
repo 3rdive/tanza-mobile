@@ -1,6 +1,5 @@
 import {
   BookingOverlay,
-  ContactInfoSection,
   DeliveryRecipientSection,
   NoteSection,
   PriceFooter,
@@ -14,8 +13,13 @@ import {
 } from "@/hooks/use-booking-form.hook";
 import { usePriceCalculation } from "@/hooks/use-price-calculation.hook";
 import { useUrgencyModal } from "@/hooks/use-urgency-modal.hook";
-import { orderService } from "@/lib/api";
-import { useAppDispatch, useAppSelector, useUser } from "@/redux/hooks/hooks";
+import { orderService, walletService } from "@/lib/api";
+import {
+  useAppDispatch,
+  useAppSelector,
+  useUser,
+  useWallet,
+} from "@/redux/hooks/hooks";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { Coordinates } from "@/types/booking.types";
 import {
@@ -25,8 +29,9 @@ import {
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   KeyboardAvoidingView,
@@ -54,6 +59,8 @@ export default function BookLogisticsScreen() {
   );
   const { send_type } = useLocalSearchParams();
   const { user } = useUser();
+  const { balance, setWallet } = useWallet();
+  const [isFetchingWallet, setIsFetchingWallet] = useState(false);
 
   // Booking form + animations
   const {
@@ -114,6 +121,48 @@ export default function BookLogisticsScreen() {
     },
     isFocused,
   });
+
+  // Always refresh wallet on focus so balance reflects latest state
+  useEffect(() => {
+    if (!isFocused) return;
+
+    let isActive = true;
+
+    const fetchWallet = async () => {
+      setIsFetchingWallet(true);
+      try {
+        const res = await walletService.getWallet();
+        if (!isActive) return;
+        if (res?.success && res.data) {
+          setWallet(res.data);
+        }
+      } catch (error) {
+        console.warn("Failed to fetch wallet", error);
+      } finally {
+        if (isActive) {
+          setIsFetchingWallet(false);
+        }
+      }
+    };
+
+    fetchWallet();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isFocused, setWallet]);
+
+  // Automatically switch between Wallet and Cash based on balance
+  useEffect(() => {
+    if (calculatedPrice === null) return;
+
+    const isSufficient = balance >= calculatedPrice;
+
+    // Only force switch to Cash if balance is insufficient and we are trying to use wallet
+    if (!isSufficient && !formData.isCashPayment) {
+      updateField("isCashPayment", true);
+    }
+  }, [balance, calculatedPrice, formData.isCashPayment, updateField]);
 
   // Clear booking flag on unmount
   useEffect(() => {
@@ -210,8 +259,6 @@ export default function BookLogisticsScreen() {
 
   const handleSelectRecipientFromAddressBook = useCallback(
     (index: number, entry: any) => {
-      updateDeliveryRecipient(index, "name", entry.name);
-      updateDeliveryRecipient(index, "email", entry.email || "");
       updateDeliveryRecipient(index, "phone", entry.phone);
     },
     [updateDeliveryRecipient]
@@ -290,13 +337,8 @@ export default function BookLogisticsScreen() {
         // For single delivery, only address is required
         return !d.address || !d.coordinates;
       } else {
-        // For multiple deliveries, name and phone are required
-        return (
-          !d.recipient.name ||
-          !d.recipient.phone ||
-          !d.address ||
-          !d.coordinates
-        );
+        // For multiple deliveries, phone is required
+        return !d.recipient.phone || !d.address || !d.coordinates;
       }
     });
 
@@ -306,7 +348,7 @@ export default function BookLogisticsScreen() {
       } else {
         Alert.alert(
           "Missing Recipient Information",
-          "Please fill in name and phone number for all recipients"
+          "Please fill in phone number for all recipients"
         );
       }
       return;
@@ -321,10 +363,18 @@ export default function BookLogisticsScreen() {
       return;
     }
 
-    if (!formData.sender.name || !formData.sender.phone) {
+    if (!formData.sender.phone) {
       Alert.alert(
         "Missing Sender Information",
-        "Please fill in sender's name and phone number"
+        "Please fill in sender's phone number"
+      );
+      return;
+    }
+
+    if (formData.retrieveCash && !formData.cashAmountToReceive) {
+      Alert.alert(
+        "Missing Information",
+        "Please enter the cash amount to collect"
       );
       return;
     }
@@ -353,8 +403,6 @@ export default function BookLogisticsScreen() {
             try {
               const res = await orderService.createMultipleDelivery({
                 sender: {
-                  name: formData.sender.name,
-                  email: formData.sender.email,
                   phone: formData.sender.phone,
                 },
                 pickUpAddress: formData.pickupLocation,
@@ -363,8 +411,6 @@ export default function BookLogisticsScreen() {
                   address: d.address,
                   coordinates: [d.coordinates!.lon, d.coordinates!.lat],
                   recipient: {
-                    name: d.recipient.name,
-                    email: d.recipient.email,
                     phone: d.recipient.phone,
                   },
                 })),
@@ -372,6 +418,10 @@ export default function BookLogisticsScreen() {
                 noteForRider: formData.noteForRider || null,
                 isUrgent: formData.isUrgent,
                 urgencyFee: formData.isUrgent ? formData.urgencyFee : undefined,
+                isCashPayment: formData.isCashPayment,
+                cashAmountToReceive: formData.retrieveCash
+                  ? formData.cashAmountToReceive
+                  : undefined,
               });
 
               if (res?.success) {
@@ -487,71 +537,122 @@ export default function BookLogisticsScreen() {
           >
             {/* Pickup Information */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                <MaterialCommunityIcons
-                  name="map-marker"
-                  size={rs(18)}
-                  color="#00B624"
-                />{" "}
-                Pickup Information
-              </Text>
               <View style={styles.pickupCard}>
-                <View style={styles.locationInputContainer}>
-                  <View style={styles.inputWrapper}>
-                    <TextInput
-                      style={styles.locationInput}
-                      value={formData.pickupLocation}
-                      onFocus={() => {
-                        const deliveryIndices = formData.deliveryLocations
-                          .map((d, idx) => (d.isCurrentLocation ? idx : -1))
-                          .filter((idx) => idx !== -1);
-
-                        router.push({
-                          pathname: "/location-search",
-                          params: {
-                            context: "pickup",
-                            pickupIsCurrentLocation:
-                              formData.pickupIsCurrentLocation
-                                ? "true"
-                                : "false",
-                            deliveryIndicesUsingCurrentLocation:
-                              deliveryIndices.join(","),
-                          },
-                        });
-                      }}
-                      showSoftInputOnFocus={false}
-                      placeholder="Select pickup location"
-                      placeholderTextColor="#999"
+                <TouchableOpacity
+                  style={styles.collapsibleHeader}
+                  onPress={() =>
+                    updateField("_pickupExpanded", !formData._pickupExpanded)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.headerLeft}>
+                    <MaterialCommunityIcons
+                      name="map-marker"
+                      size={rs(18)}
+                      color="#00B624"
                     />
-                    {formData.pickupLocation && (
+                    <View style={styles.headerTextContainer}>
+                      <Text style={styles.collapsibleTitle}>
+                        Pickup & Sender Information
+                      </Text>
+                      {!formData._pickupExpanded &&
+                        (formData.pickupLocation || formData.sender.phone) && (
+                          <Text style={styles.previewText} numberOfLines={1}>
+                            {formData.pickupLocation &&
+                              `📍 ${formData.pickupLocation}`}
+                            {formData.pickupLocation &&
+                              formData.sender.phone &&
+                              " • "}
+                            {formData.sender.phone &&
+                              `📱 ${formData.sender.phone}`}
+                          </Text>
+                        )}
+                    </View>
+                  </View>
+                  <MaterialIcons
+                    name={formData._pickupExpanded ? "remove" : "add"}
+                    size={rs(24)}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+
+                {formData._pickupExpanded && (
+                  <View style={styles.collapsibleContent}>
+                    <View style={styles.locationInputContainer}>
+                      <Text style={styles.inputLabel}>Pickup Location</Text>
+                      <View style={styles.inputWrapper}>
+                        <TextInput
+                          style={styles.locationInput}
+                          value={formData.pickupLocation}
+                          onFocus={() => {
+                            const deliveryIndices = formData.deliveryLocations
+                              .map((d, idx) => (d.isCurrentLocation ? idx : -1))
+                              .filter((idx) => idx !== -1);
+
+                            router.push({
+                              pathname: "/location-search",
+                              params: {
+                                context: "pickup",
+                                pickupIsCurrentLocation:
+                                  formData.pickupIsCurrentLocation
+                                    ? "true"
+                                    : "false",
+                                deliveryIndicesUsingCurrentLocation:
+                                  deliveryIndices.join(","),
+                              },
+                            });
+                          }}
+                          showSoftInputOnFocus={false}
+                          placeholder="Select pickup location"
+                          placeholderTextColor="#999"
+                        />
+                        {formData.pickupLocation && (
+                          <TouchableOpacity
+                            onPress={handleClearPickup}
+                            style={styles.clearButton}
+                          >
+                            <MaterialIcons
+                              name="close"
+                              size={rs(18)}
+                              color="#666"
+                            />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+
+                    <View style={styles.senderInfoContainer}>
+                      <Text style={styles.inputLabel}>Sender Phone Number</Text>
+                      <View style={styles.inputWrapper}>
+                        <TextInput
+                          style={styles.locationInput}
+                          value={formData.sender.phone}
+                          onChangeText={(text) =>
+                            updateSenderField("phone", text)
+                          }
+                          keyboardType="phone-pad"
+                          placeholder="Enter sender's phone number"
+                          placeholderTextColor="#999"
+                        />
+                      </View>
                       <TouchableOpacity
-                        onPress={handleClearPickup}
-                        style={styles.clearButton}
+                        style={styles.useMyInfoButton}
+                        onPress={handleUseSenderMyInfo}
                       >
                         <MaterialIcons
-                          name="close"
-                          size={rs(18)}
-                          color="#666"
+                          name={
+                            useSenderMyInfo
+                              ? "check-box"
+                              : "check-box-outline-blank"
+                          }
+                          size={rs(20)}
+                          color="#007AFF"
                         />
+                        <Text style={styles.useMyInfoText}>Use my mobile</Text>
                       </TouchableOpacity>
-                    )}
+                    </View>
                   </View>
-                </View>
-
-                <ContactInfoSection
-                  title="Sender Information"
-                  contactInfo={formData.sender}
-                  onUpdateField={updateSenderField}
-                  onUseMyInfo={handleUseSenderMyInfo}
-                  onSelectFromAddressBook={handleSelectSenderFromAddressBook}
-                  onSearchAddressBook={handleSearchAddressBook}
-                  canUseMyInfo={true}
-                  useMyInfoChecked={useSenderMyInfo}
-                  addressBookEntries={addressBook}
-                  isLoadingAddressBook={isLoadingAddressBook}
-                  role="sender"
-                  initialExpanded={true}
-                />
+                )}
               </View>
             </View>
 
@@ -573,84 +674,132 @@ export default function BookLogisticsScreen() {
 
               {formData.deliveryLocations.map((delivery, index) => (
                 <View key={index} style={styles.deliveryCard}>
-                  <View style={styles.deliveryHeader}>
-                    {formData.deliveryLocations.length > 1 && (
-                      <Text style={styles.deliveryNumber}>
-                        Delivery {index + 1}
-                      </Text>
-                    )}
-                    {formData.deliveryLocations.length > 1 && (
-                      <TouchableOpacity
-                        onPress={() => handleRemoveDelivery(index)}
-                        style={styles.removeButton}
-                      >
-                        <MaterialIcons
-                          name="close"
-                          size={rs(20)}
-                          color="#ff4444"
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  {/* Location Input */}
-                  <View style={styles.locationInputContainer}>
-                    <Text style={styles.inputLabel}>Drop-off Address</Text>
-                    <View style={styles.inputWrapper}>
-                      <TextInput
-                        style={styles.locationInput}
-                        value={delivery.address}
-                        onFocus={() => {
-                          const deliveryIndices = formData.deliveryLocations
-                            .map((d, idx) => (d.isCurrentLocation ? idx : -1))
-                            .filter((idx) => idx !== -1);
-
-                          router.push({
-                            pathname: "/location-search",
-                            params: {
-                              context: `delivery-${index}`,
-                              pickupIsCurrentLocation:
-                                formData.pickupIsCurrentLocation
-                                  ? "true"
-                                  : "false",
-                              deliveryIndicesUsingCurrentLocation:
-                                deliveryIndices.join(","),
-                            },
-                          });
-                        }}
-                        showSoftInputOnFocus={false}
-                        placeholder="Select drop-off location"
-                        placeholderTextColor="#999"
+                  <TouchableOpacity
+                    style={styles.collapsibleHeader}
+                    onPress={() => {
+                      const expanded = delivery._expanded ?? true;
+                      const updatedLocations = [...formData.deliveryLocations];
+                      updatedLocations[index] = {
+                        ...updatedLocations[index],
+                        _expanded: !expanded,
+                      };
+                      updateField("deliveryLocations", updatedLocations);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.headerLeft}>
+                      <MaterialCommunityIcons
+                        name="truck-delivery"
+                        size={rs(18)}
+                        color="#00B624"
                       />
-                      {delivery.address && (
+                      <View style={styles.headerTextContainer}>
+                        <Text style={styles.collapsibleTitle}>
+                          {formData.deliveryLocations.length > 1
+                            ? `Delivery ${index + 1}`
+                            : "Delivery Location"}
+                        </Text>
+                        {!(delivery._expanded ?? true) &&
+                          (delivery.address || delivery.recipient.phone) && (
+                            <Text style={styles.previewText} numberOfLines={1}>
+                              {delivery.address && `📍 ${delivery.address}`}
+                              {delivery.address &&
+                                delivery.recipient.phone &&
+                                " • "}
+                              {delivery.recipient.phone &&
+                                `📱 ${delivery.recipient.phone}`}
+                            </Text>
+                          )}
+                      </View>
+                    </View>
+                    <View style={styles.headerRight}>
+                      {formData.deliveryLocations.length > 1 && (
                         <TouchableOpacity
-                          onPress={() => handleClearDelivery(index)}
-                          style={styles.clearButton}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleRemoveDelivery(index);
+                          }}
+                          style={styles.removeButton}
                         >
                           <MaterialIcons
                             name="close"
-                            size={rs(18)}
-                            color="#666"
+                            size={rs(20)}
+                            color="#ff4444"
                           />
                         </TouchableOpacity>
                       )}
+                      <MaterialIcons
+                        name={delivery._expanded ?? true ? "remove" : "add"}
+                        size={rs(24)}
+                        color="#666"
+                      />
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
-                  {/* Recipient Info */}
-                  <DeliveryRecipientSection
-                    deliveryIndex={index}
-                    recipient={delivery.recipient}
-                    onUpdateField={updateDeliveryRecipient}
-                    addressBook={addressBook}
-                    isLoadingAddressBook={isLoadingAddressBook}
-                    onSearchAddressBook={handleSearchAddressBook}
-                    onSelectFromAddressBook={
-                      handleSelectRecipientFromAddressBook
-                    }
-                    isRequired={formData.deliveryLocations.length > 1}
-                    totalDeliveries={formData.deliveryLocations.length}
-                  />
+                  {(delivery._expanded ?? true) && (
+                    <View style={styles.collapsibleContent}>
+                      {/* Location Input */}
+                      <View style={styles.locationInputContainer}>
+                        <Text style={styles.inputLabel}>Drop-off Address</Text>
+                        <View style={styles.inputWrapper}>
+                          <TextInput
+                            style={styles.locationInput}
+                            value={delivery.address}
+                            onFocus={() => {
+                              const deliveryIndices = formData.deliveryLocations
+                                .map((d, idx) =>
+                                  d.isCurrentLocation ? idx : -1
+                                )
+                                .filter((idx) => idx !== -1);
+
+                              router.push({
+                                pathname: "/location-search",
+                                params: {
+                                  context: `delivery-${index}`,
+                                  pickupIsCurrentLocation:
+                                    formData.pickupIsCurrentLocation
+                                      ? "true"
+                                      : "false",
+                                  deliveryIndicesUsingCurrentLocation:
+                                    deliveryIndices.join(","),
+                                },
+                              });
+                            }}
+                            showSoftInputOnFocus={false}
+                            placeholder="Select drop-off location"
+                            placeholderTextColor="#999"
+                          />
+                          {delivery.address && (
+                            <TouchableOpacity
+                              onPress={() => handleClearDelivery(index)}
+                              style={styles.clearButton}
+                            >
+                              <MaterialIcons
+                                name="close"
+                                size={rs(18)}
+                                color="#666"
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Recipient Info */}
+                      <DeliveryRecipientSection
+                        deliveryIndex={index}
+                        recipient={delivery.recipient}
+                        onUpdateField={updateDeliveryRecipient}
+                        addressBook={addressBook}
+                        isLoadingAddressBook={isLoadingAddressBook}
+                        onSearchAddressBook={handleSearchAddressBook}
+                        onSelectFromAddressBook={
+                          handleSelectRecipientFromAddressBook
+                        }
+                        isRequired={formData.deliveryLocations.length > 1}
+                        totalDeliveries={formData.deliveryLocations.length}
+                      />
+                    </View>
+                  )}
                 </View>
               ))}
 
@@ -676,6 +825,173 @@ export default function BookLogisticsScreen() {
               disabled={isUrgentDisabled}
               onToggle={handleUrgentToggle}
             />
+
+            {/* Payment Method Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  <MaterialCommunityIcons
+                    name="wallet"
+                    size={rs(18)}
+                    color="#00B624"
+                  />{" "}
+                  Payment Method
+                </Text>
+              </View>
+              <View style={styles.deliveryCard}>
+                {/* Wallet Option */}
+                <TouchableOpacity
+                  style={styles.paymentOption}
+                  disabled={
+                    calculatedPrice !== null && balance < calculatedPrice
+                  }
+                  onPress={() => updateField("isCashPayment", false)}
+                >
+                  <View style={styles.paymentOptionRow}>
+                    <MaterialIcons
+                      name={
+                        !formData.isCashPayment
+                          ? "radio-button-checked"
+                          : "radio-button-unchecked"
+                      }
+                      size={rs(24)}
+                      color={
+                        !formData.isCashPayment
+                          ? "#00B624"
+                          : calculatedPrice !== null &&
+                            balance < calculatedPrice
+                          ? "#eee"
+                          : "#ccc"
+                      }
+                    />
+                    <View style={styles.paymentOptionTextContainer}>
+                      <Text
+                        style={[
+                          styles.paymentOptionTitle,
+                          calculatedPrice !== null &&
+                            balance < calculatedPrice && { color: "#999" },
+                        ]}
+                      >
+                        Wallet
+                      </Text>
+                      <Text style={styles.paymentOptionSubtitle}>
+                        Balance: ₦{balance.toLocaleString()}
+                      </Text>
+                      {calculatedPrice !== null &&
+                        balance < calculatedPrice && (
+                          <Text
+                            style={{
+                              fontSize: rs(12),
+                              color: "#ff4444",
+                              marginTop: rs(2),
+                            }}
+                          >
+                            Insufficient balance
+                          </Text>
+                        )}
+                    </View>
+                    {isFetchingWallet && (
+                      <ActivityIndicator size="small" color="#00B624" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.divider} />
+
+                {/* Cash Option */}
+                <TouchableOpacity
+                  style={styles.paymentOption}
+                  onPress={() => updateField("isCashPayment", true)}
+                >
+                  <View style={styles.paymentOptionRow}>
+                    <MaterialIcons
+                      name={
+                        formData.isCashPayment
+                          ? "radio-button-checked"
+                          : "radio-button-unchecked"
+                      }
+                      size={rs(24)}
+                      color={formData.isCashPayment ? "#00B624" : "#ccc"}
+                    />
+                    <View style={styles.paymentOptionTextContainer}>
+                      <Text style={styles.paymentOptionTitle}>
+                        Cash / Pay on Delivery
+                      </Text>
+                      <Text style={styles.paymentOptionSubtitle}>
+                        Pay rider with cash upon delivery
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Retrieve Cash Section */}
+            <View style={styles.section}>
+              <View style={styles.deliveryCard}>
+                <TouchableOpacity
+                  style={styles.retrieveCashToggle}
+                  onPress={() => {
+                    const newValue = !formData.retrieveCash;
+                    updateField("retrieveCash", newValue);
+                    if (!newValue) {
+                      updateField("cashAmountToReceive", 0);
+                    }
+                  }}
+                >
+                  <View style={styles.toggleLeft}>
+                    <MaterialCommunityIcons
+                      name="cash-multiple"
+                      size={rs(20)}
+                      color="#00B624"
+                    />
+                    <View style={styles.toggleTextContainer}>
+                      <Text style={styles.toggleTitle}>Retrieve Cash</Text>
+                      <Text style={styles.toggleSubtitle}>
+                        Rider will collect cash from recipient
+                      </Text>
+                    </View>
+                  </View>
+                  <MaterialIcons
+                    name={formData.retrieveCash ? "toggle-on" : "toggle-off"}
+                    size={rs(40)}
+                    color={formData.retrieveCash ? "#00B624" : "#ccc"}
+                  />
+                </TouchableOpacity>
+
+                {formData.retrieveCash && (
+                  <View
+                    style={[
+                      styles.locationInputContainer,
+                      { marginTop: rs(16) },
+                    ]}
+                  >
+                    <Text style={styles.inputLabel}>
+                      Cash amount to collect
+                    </Text>
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        style={styles.locationInput}
+                        value={
+                          formData.cashAmountToReceive
+                            ? formData.cashAmountToReceive.toString()
+                            : ""
+                        }
+                        onChangeText={(text) =>
+                          updateField(
+                            "cashAmountToReceive",
+                            text ? parseFloat(text) : 0
+                          )
+                        }
+                        keyboardType="numeric"
+                        placeholder="Enter amount to collect"
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
 
             <NoteSection
               noteForRider={formData.noteForRider}
@@ -834,5 +1150,124 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#007AFF",
     marginLeft: rs(8),
+  },
+  paymentRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: rs(4),
+  },
+  paymentLabel: {
+    fontSize: rs(14),
+    color: "#666",
+    fontWeight: "500",
+  },
+  paymentValue: {
+    fontSize: rs(16),
+    fontWeight: "bold",
+    color: "#000",
+  },
+  paymentSubtext: {
+    fontSize: rs(12),
+    color: "#999",
+    marginTop: rs(2),
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: rs(12),
+  },
+  paymentOption: {
+    paddingVertical: rs(8),
+    opacity: 1,
+  },
+  paymentOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  paymentOptionTextContainer: {
+    marginLeft: rs(12),
+    flex: 1,
+  },
+  paymentOptionTitle: {
+    fontSize: rs(16),
+    fontWeight: "600",
+    color: "#000",
+  },
+  paymentOptionSubtitle: {
+    fontSize: rs(13),
+    color: "#666",
+    marginTop: rs(2),
+  },
+  retrieveCashToggle: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: rs(4),
+  },
+  toggleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  toggleTextContainer: {
+    marginLeft: rs(12),
+    flex: 1,
+  },
+  toggleTitle: {
+    fontSize: rs(16),
+    fontWeight: "600",
+    color: "#000",
+  },
+  toggleSubtitle: {
+    fontSize: rs(13),
+    color: "#666",
+    marginTop: rs(2),
+  },
+  collapsibleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: rs(4),
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  headerTextContainer: {
+    marginLeft: rs(8),
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: rs(8),
+  },
+  collapsibleTitle: {
+    fontSize: rs(16),
+    fontWeight: "600",
+    color: "#000",
+  },
+  previewText: {
+    fontSize: rs(12),
+    color: "#666",
+    marginTop: rs(2),
+  },
+  collapsibleContent: {
+    marginTop: rs(12),
+  },
+  senderInfoContainer: {
+    marginTop: rs(4),
+  },
+  useMyInfoButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: rs(8),
+  },
+  useMyInfoText: {
+    fontSize: rs(14),
+    color: "#007AFF",
+    marginLeft: rs(6),
   },
 });

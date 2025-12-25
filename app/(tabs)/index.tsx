@@ -1,5 +1,6 @@
 // HomeScreen.ts
 import ReviewBottomSheet from "@/components/reviews/review-bottom-sheet";
+import TransactionItem from "@/components/transaction/TransactionItem";
 import { useSocketTasks } from "@/hooks/use-socket-tasks.hook";
 import { useTasks } from "@/hooks/use-task.hook";
 import {
@@ -9,10 +10,13 @@ import {
   userService,
   walletService,
 } from "@/lib/api";
-import { getStatusColor } from "@/lib/functions";
 import { StorageKeys, StorageMechanics } from "@/lib/storage-mechanics";
 import { useUser, useWallet } from "@/redux/hooks/hooks";
 import { tzColors } from "@/theme/color";
+import {
+  mapApiTransactionToUI,
+  type MappedTransaction,
+} from "@/utils/transaction.utils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -27,8 +31,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
+import { SafeAreaView } from "react-native-safe-area-context";
 const UI_SCALE = 0.82; // globally downscale sizes ~18%
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
 
@@ -44,7 +48,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const { balance, setWallet } = useWallet();
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<MappedTransaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const [showReview, setShowReview] = useState(false);
@@ -89,35 +93,7 @@ export default function HomeScreen() {
       }
       if (txResp?.success) {
         const apiTx = (txResp as any).data || [];
-        const mapped = apiTx.map((t: any) => {
-          // Map API type to local icon type and amount sign stays as-is for now
-          const upperType = String(t.type).toUpperCase();
-          const iconType =
-            upperType === "DEPOSIT"
-              ? "fund"
-              : upperType === "WITHDRAWAL" || upperType === "ORDER"
-                ? "send"
-                : "receive";
-          const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Package Sent";
-          const created = new Date(t.createdAt);
-          const dateStr = !isNaN(created.getTime())
-            ? created.toLocaleDateString()
-            : t.createdAt;
-          // Prefer orderStatus for ORDER types
-          const status =
-            String(t.type).toUpperCase() === "ORDER" && t.orderStatus
-              ? String(t.orderStatus)
-              : String(t.status);
-          return {
-            id: t.id,
-            type: iconType,
-            title,
-            subtitle: (t.description || "").toString(),
-            amount: Number(t.amount) || 0,
-            date: dateStr,
-            status,
-          };
-        });
+        const mapped = apiTx.map(mapApiTransactionToUI);
         setTransactions(mapped);
       }
     } catch (e) {
@@ -150,7 +126,7 @@ export default function HomeScreen() {
   useEffect(() => {
     StorageMechanics.set(
       StorageKeys.HAS_ONBOARDING_COMPLETED,
-      StorageKeys.HAS_ONBOARDING_COMPLETED,
+      StorageKeys.HAS_ONBOARDING_COMPLETED
     );
 
     load(true);
@@ -161,7 +137,7 @@ export default function HomeScreen() {
     if (tasks.length > 0) {
       // Find the first review_request task
       const reviewTask = tasks.find(
-        (task) => task.category === "request_review",
+        (task) => task.category === "request_review"
       );
 
       if (reviewTask) {
@@ -187,99 +163,11 @@ export default function HomeScreen() {
     }
   }, [tasks]);
 
-  const getTransactionIcon = (type: any) => {
-    switch (type) {
-      case "send":
-        return (
-          <MaterialCommunityIcons
-            name="tray-arrow-up"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-      case "receive":
-        return (
-          <MaterialCommunityIcons
-            name="tray-arrow-down"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-      case "fund":
-        return (
-          <MaterialCommunityIcons
-            name="currency-ngn"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-      default:
-        return (
-          <MaterialCommunityIcons
-            name="credit-card"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-    }
-  };
-
-  const TransactionItem = ({ transaction }: { transaction: any }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/transactions/${transaction.id}`)}
-    >
-      <View style={styles.transactionItem}>
-        <View style={styles.transactionIconContainer}>
-          <Text style={styles.transactionIcon} allowFontScaling={false}>
-            {getTransactionIcon(transaction.type)}
-          </Text>
-        </View>
-        <View style={styles.transactionDetails}>
-          <Text style={styles.transactionTitle} allowFontScaling={false}>
-            {transaction.title}
-          </Text>
-          <Text style={styles.transactionSubtitle} allowFontScaling={false}>
-            {transaction.subtitle}
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={styles.transactionDate} allowFontScaling={false}>
-              {transaction.date}
-            </Text>
-            {transaction.status ? (
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: getStatusColor(transaction.status) },
-                ]}
-              >
-                <Text style={styles.statusText} allowFontScaling={false}>
-                  {String(transaction.status).replace(/_/g, " ")}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-        <Text
-          style={[
-            styles.transactionAmount,
-            transaction.amount > 0
-              ? styles.positiveAmount
-              : styles.negativeAmount,
-          ]}
-          allowFontScaling={false}
-        >
-          {transaction.amount > 0 ? "+" : ""}₦
-          {Math.abs(transaction.amount).toLocaleString()}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B624" />
+          <ActivityIndicator size="large" color="black" />
           <Text style={styles.loadingText} allowFontScaling={false}>
             Loading your dashboard...
           </Text>
@@ -331,7 +219,7 @@ export default function HomeScreen() {
       console.error("Error submitting review:", error);
       Alert.alert(
         "Error",
-        error?.message || "Failed to submit review. Please try again.",
+        error?.message || "Failed to submit review. Please try again."
       );
     }
   };
@@ -345,6 +233,10 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
+            tintColor="black" // iOS
+            // Android
+            colors={["black", "black", "black"]}
+            progressBackgroundColor="black"
             onRefresh={() => load(false)}
           />
         }
@@ -486,7 +378,7 @@ export default function HomeScreen() {
 
           {transactionsLoading ? (
             <View style={styles.transactionsLoading}>
-              <ActivityIndicator size="small" color="#00B624" />
+              <ActivityIndicator size="small" color="black" />
               <Text
                 style={styles.loadingTransactionsText}
                 allowFontScaling={false}
@@ -496,7 +388,7 @@ export default function HomeScreen() {
             </View>
           ) : transactions.length > 0 ? (
             <View style={styles.transactionsList}>
-              {transactions.map((transaction: any) => (
+              {transactions.map((transaction: MappedTransaction) => (
                 <TransactionItem
                   key={transaction.id}
                   transaction={transaction}
@@ -751,65 +643,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: rs(16),
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  transactionIconContainer: {
-    width: rs(40),
-    height: rs(40),
-    backgroundColor: "#f0fffe",
-    borderRadius: rs(20),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: rs(12),
-  },
-  transactionIcon: {
-    fontSize: rs(18),
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionTitle: {
-    fontSize: rs(16),
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: rs(2),
-  },
-  transactionSubtitle: {
-    fontSize: rs(14),
-    color: "#666",
-    marginBottom: rs(2),
-  },
-  transactionDate: {
-    fontSize: rs(12),
-    color: "#999",
-  },
-  transactionAmount: {
-    fontSize: rs(16),
-    fontWeight: "600",
-  },
-  statusBadge: {
-    paddingHorizontal: rs(6),
-    paddingVertical: rs(2),
-    borderRadius: rs(10),
-    marginLeft: rs(8),
-  },
-  statusText: {
-    fontSize: rs(10),
-    color: "#fff",
-    fontWeight: "600",
-    textTransform: "capitalize",
-  },
-  positiveAmount: {
-    color: "#22c55e",
-  },
-  negativeAmount: {
-    color: "#ef4444",
   },
   emptyState: {
     backgroundColor: "#fff",

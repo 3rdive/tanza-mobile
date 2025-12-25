@@ -1,12 +1,9 @@
 export interface ContactInfo {
-  name: string;
-  email: string;
   phone: string;
 }
 
 export interface AddressBookEntry {
-  name: string;
-  email: string;
+  name?: string;
   phone: string;
   role: "sender" | "recipient";
 }
@@ -28,6 +25,7 @@ export interface DeliveryLocation {
   coordinates: Coordinates | null;
   isCurrentLocation?: boolean;
   recipient: ContactInfo;
+  _expanded?: boolean;
 }
 
 export interface BookingFormData {
@@ -39,6 +37,10 @@ export interface BookingFormData {
   sender: ContactInfo;
   deliveryLocations: DeliveryLocation[];
   pickupIsCurrentLocation?: boolean;
+  isCashPayment?: boolean;
+  retrieveCash?: boolean;
+  cashAmountToReceive?: number;
+  _pickupExpanded?: boolean;
   // Legacy fields for backward compatibility during migration
   dropOffLocation?: string;
   recipient?: ContactInfo;

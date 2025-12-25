@@ -47,19 +47,10 @@ export function useBookOrder(options: {
     if (!useSenderMyInfo) {
       const userData = user as any;
       if (userData) {
-        const fullName =
-          userData.firstName && userData.lastName
-            ? `${userData.firstName} ${userData.lastName}`.trim()
-            : userData.firstName || userData.lastName || "";
-
-        updateSenderField("name", fullName);
-        updateSenderField("email", userData.email || "");
         updateSenderField("phone", userData.mobile || "");
         setUseSenderMyInfo(true);
       }
     } else {
-      updateSenderField("name", "");
-      updateSenderField("email", "");
       updateSenderField("phone", "");
       setUseSenderMyInfo(false);
     }
@@ -77,19 +68,10 @@ export function useBookOrder(options: {
     if (!useRecipientMyInfo) {
       const userData = user as any;
       if (userData) {
-        const fullName =
-          userData.firstName && userData.lastName
-            ? `${userData.firstName} ${userData.lastName}`.trim()
-            : userData.firstName || userData.lastName || "";
-
-        updateRecipientField("name", fullName);
-        updateRecipientField("email", userData.email || "");
         updateRecipientField("phone", userData.mobile || "");
         setUseRecipientMyInfo(true);
       }
     } else {
-      updateRecipientField("name", "");
-      updateRecipientField("email", "");
       updateRecipientField("phone", "");
       setUseRecipientMyInfo(false);
     }
@@ -97,8 +79,6 @@ export function useBookOrder(options: {
 
   const handleSelectSenderFromAddressBook = useCallback(
     (entry: AddressBookEntry) => {
-      updateSenderField("name", entry.name);
-      updateSenderField("email", entry.email);
       updateSenderField("phone", entry.phone);
       setUseSenderMyInfo(false);
     },
@@ -107,8 +87,6 @@ export function useBookOrder(options: {
 
   const handleSelectRecipientFromAddressBook = useCallback(
     (entry: AddressBookEntry) => {
-      updateRecipientField("name", entry.name);
-      updateRecipientField("email", entry.email);
       updateRecipientField("phone", entry.phone);
       setUseRecipientMyInfo(false);
     },

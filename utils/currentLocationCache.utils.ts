@@ -1,4 +1,5 @@
 import { locationService } from "@/lib/api";
+import { StorageKeys, StorageMechanics } from "@/lib/storage-mechanics";
 import * as Location from "expo-location";
 
 export interface CachedCurrentLocation {
@@ -7,8 +8,6 @@ export interface CachedCurrentLocation {
   address: string;
   timestamp: number;
 }
-
-let cachedLocation: CachedCurrentLocation | null = null;
 
 // Coordinate threshold (±0.0001 degrees ~ 10-15m for lat/lon)
 const COORD_THRESHOLD = 0.0001;
@@ -53,6 +52,10 @@ export async function getCurrentLocationWithCache(): Promise<{
     const { latitude: lat, longitude: lon } = location.coords;
 
     // Check if cached coordinates match within threshold
+    const cachedLocation = await StorageMechanics.get(
+      StorageKeys.CURRENT_LOCATION_CACHE
+    );
+
     if (
       cachedLocation &&
       coordsMatch(lat, lon, cachedLocation.lat, cachedLocation.lon)
@@ -70,12 +73,17 @@ export async function getCurrentLocationWithCache(): Promise<{
     const address = data?.name || data?.display_name || "Current Location";
 
     // Update cache
-    cachedLocation = {
+    const newCachedLocation: CachedCurrentLocation = {
       lat,
       lon,
       address,
       timestamp: Date.now(),
     };
+
+    await StorageMechanics.set(
+      StorageKeys.CURRENT_LOCATION_CACHE,
+      newCachedLocation
+    );
 
     return { lat, lon, address };
   } catch (error: any) {
@@ -86,13 +94,13 @@ export async function getCurrentLocationWithCache(): Promise<{
 /**
  * Clear cached location (for testing or manual refresh)
  */
-export function clearCurrentLocationCache(): void {
-  cachedLocation = null;
+export async function clearCurrentLocationCache(): Promise<void> {
+  await StorageMechanics.remove(StorageKeys.CURRENT_LOCATION_CACHE);
 }
 
 /**
  * Get cached location without fetching (returns null if not cached)
  */
-export function getCachedCurrentLocation(): CachedCurrentLocation | null {
-  return cachedLocation;
+export async function getCachedCurrentLocation(): Promise<CachedCurrentLocation | null> {
+  return await StorageMechanics.get(StorageKeys.CURRENT_LOCATION_CACHE);
 }

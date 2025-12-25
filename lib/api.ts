@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
 //https://api.delivery.herlay.com
-export const BASE_URL = "https://api.delivery.herlay.com";
+export const BASE_URL = "https://demagogic-toby-glamourously.ngrok-free.dev";
 export const AXIOS: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
@@ -83,12 +83,18 @@ AXIOS.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Normalize message to always be a string (take first item if array)
+    if (isAxiosError(error) && error.response?.data) {
+      const res = error.response;
+      if (Array.isArray(res.data.message)) {
+        res.data.message = res.data.message[0] || "An error occurred";
+      }
+    }
+
     if (isDev) {
       if (isAxiosError(error)) {
         const res = error.response;
-        const message = Array.isArray(res?.data?.message)
-          ? res.data.message.join(", ")
-          : res?.data?.message || error.message;
+        const message = res?.data?.message || error.message;
         console.error("[Axios Response Error]", {
           method: error.config?.method,
           url: error.config?.url,
@@ -562,8 +568,6 @@ export const orderService = {
   },
   createMultipleDelivery: async (payload: {
     sender: {
-      name: string;
-      email: string;
       phone: string;
     };
     pickUpAddress: string;
@@ -572,8 +576,6 @@ export const orderService = {
       address: string;
       coordinates: [number, number]; // [lon, lat]
       recipient: {
-        name: string;
-        email: string;
         phone: string;
       };
     }[];
@@ -581,6 +583,8 @@ export const orderService = {
     noteForRider?: string | null;
     isUrgent: boolean;
     urgencyFee?: number;
+    isCashPayment?: boolean;
+    cashPaymentAmount?: number;
   }) => {
     const { data } = await AXIOS.post<IApiResponse<IOrderData>>(
       "/api/v1/order/multiple-delivery",
@@ -593,8 +597,7 @@ export const orderService = {
       success: boolean;
       message: string;
       data: {
-        name: string;
-        email: string;
+        name?: string;
         phone: string;
         role: "sender" | "recipient";
       }[];
@@ -627,6 +630,8 @@ export interface ILocationFeatureProperties {
   state?: string;
   county?: string;
   extent?: number[];
+  placeId?: string;
+  description?: string;
 }
 
 export interface ILocationFeatureGeometry {
@@ -670,27 +675,22 @@ export const locationService = {
 
     const features: ILocationFeature[] = items.map((it: any, idx: number) => {
       const props: ILocationFeatureProperties = {
-        osm_type: it.osm_type || "place",
-        osm_id: it.osm_id || idx,
-        osm_key: it.osm_key,
-        osm_value: it.osm_value,
-        type: it.type || "location",
-        postcode: it.postcode || it.postcode || undefined,
-        housenumber: it.houseNumber || it.housenumber || undefined,
-        countrycode:
-          it.countrycode || it.countryCode || it.countrycode || undefined,
-        name: it.name || it.displayName || it.description || undefined,
+        osm_type: "place",
+        osm_id: idx,
+        placeId: it.id,
+        name: it.name,
+        description: it.description,
+        type: "location",
         country: it.country,
         city: it.city,
         street: it.street,
         state: it.state,
-        county: it.county,
-        extent: it.extent,
+        postcode: it.postcode,
+        countrycode: it.countrycode,
       };
 
       const geometry: ILocationFeatureGeometry = {
         type: "Point",
-        // ensure coordinates are [lon, lat]; backend uses latitude/longitude fields
         coordinates: [Number(it.longitude) || 0, Number(it.latitude) || 0],
       };
 
@@ -707,6 +707,14 @@ export const locationService = {
       message: data?.message ?? "",
       data: features,
     } as IApiResponse<ILocationFeature[]>;
+  },
+
+  getPlaceDetails: async (placeId: string) => {
+    const { data } = await AXIOS.get<IApiResponse<any>>(
+      "/api/v1/location/place-details",
+      { params: { placeId } }
+    );
+    return data;
   },
 
   // The reverse endpoint now returns a flat object with fields like:

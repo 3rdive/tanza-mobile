@@ -113,19 +113,6 @@ export const DeliveryLocationsSection = memo<DeliveryLocationsSectionProps>(
             {/* Recipient Info Title */}
             <Text style={styles.recipientTitle}>Recipient Information</Text>
 
-            {/* Recipient Name */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Name</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Recipient name"
-                placeholderTextColor="#999"
-                value={delivery.recipient.name}
-                // This will be handled by parent component
-                editable={false}
-              />
-            </View>
-
             {/* Recipient Phone */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Phone</Text>
@@ -135,21 +122,6 @@ export const DeliveryLocationsSection = memo<DeliveryLocationsSectionProps>(
                 placeholderTextColor="#999"
                 keyboardType="phone-pad"
                 value={delivery.recipient.phone}
-                // This will be handled by parent component
-                editable={false}
-              />
-            </View>
-
-            {/* Recipient Email */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email (Optional)</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Recipient email"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={delivery.recipient.email}
                 // This will be handled by parent component
                 editable={false}
               />

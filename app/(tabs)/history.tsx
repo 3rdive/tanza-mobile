@@ -1,5 +1,10 @@
+import TransactionItem from "@/components/transaction/TransactionItem";
 import { transactionService } from "@/lib/api";
 import { tzColors } from "@/theme/color";
+import {
+  mapApiTransactionToUI,
+  type MappedTransaction,
+} from "@/utils/transaction.utils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { JSX, useCallback, useEffect, useState } from "react";
@@ -19,79 +24,15 @@ const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue(n * UI_SCALE);
 const PAGE_SIZE = 10;
 
-type TransactionType = "send" | "receive" | "fund";
-
-type TransactionStatus =
-  | "completed"
-  | "failed"
-  | "refunded"
-  | "transit"
-  | "pending"
-  | "accepted"
-  | "delivered";
-
-type Transaction = {
-  id: string;
-  type: TransactionType;
-  title: string;
-  subtitle: string;
-  amount: number;
-  date: string;
-  status: TransactionStatus;
-  // optional fields depending on type
-  recipient?: string;
-  sender?: string;
-  trackingId?: string;
-  location?: string;
-  paymentMethod?: string;
-  reference?: string;
-};
-
 export default function TransactionHistoryScreen(): JSX.Element {
   const { refresh } = useLocalSearchParams<{ refresh: string }>();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<MappedTransaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [filter, setFilter] = useState<"all" | "ORDER" | "DEPOSIT">("all");
-
-  const mapApiToUI = useCallback((items: any[]): Transaction[] => {
-    return (items || []).map((t: any) => {
-      const iconType: TransactionType = t.type === "DEPOSIT" ? "fund" : "send"; // ORDER→send (outgoing), DEPOSIT→fund
-      const title = t.type === "DEPOSIT" ? "Wallet Top-up" : "Order";
-      const created = new Date(t.createdAt);
-      const dateStr = !isNaN(created.getTime())
-        ? created.toISOString()
-        : t.createdAt;
-      // If ORDER, prefer orderStatus from API (e.g., pending, accepted, delivered)
-      let status: TransactionStatus;
-      if ((t.type || "").toUpperCase() === "ORDER" && t.orderStatus) {
-        const os = String(t.orderStatus).toLowerCase();
-        const allowed = ["pending", "accepted", "delivered", "transit"];
-        status = (allowed.includes(os) ? os : "pending") as TransactionStatus;
-      } else {
-        // Map non-order statuses: complete, failed, refunded → completed, failed, refunded
-        const statusMap: Record<string, TransactionStatus> = {
-          complete: "completed",
-          failed: "failed",
-          refunded: "refunded",
-        } as const;
-        status = (statusMap[(t.status || "").toLowerCase()] ||
-          "completed") as TransactionStatus;
-      }
-      return {
-        id: t.id,
-        type: iconType,
-        title,
-        subtitle: (t.description || "").toString(),
-        amount: Number(t.amount) || 0,
-        date: dateStr,
-        status,
-      } as Transaction;
-    });
-  }, []);
 
   const fetchPage = useCallback(
     async (pageToLoad: number, append: boolean) => {
@@ -100,7 +41,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
         if (filter !== "all") params.transactionType = filter;
         const resp = await transactionService.getRecent(params);
         const apiItems = (resp as any)?.data || [];
-        const mapped = mapApiToUI(apiItems);
+        const mapped = apiItems.map(mapApiTransactionToUI);
         setHasMore(
           ((resp as any)?.pagination?.page || pageToLoad) <
             ((resp as any)?.pagination?.totalPages || 0)
@@ -111,7 +52,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
         console.warn("Failed to load transactions", e);
       }
     },
-    [filter, mapApiToUI]
+    [filter]
   );
 
   useEffect(() => {
@@ -137,141 +78,6 @@ export default function TransactionHistoryScreen(): JSX.Element {
       router.setParams({ refresh: "" });
     }
   }, [refresh, onRefresh]);
-
-  const filterTransactions = (
-    transactionList: Transaction[]
-  ): Transaction[] => {
-    return transactionList; // server-side filtered
-  };
-
-  const getTransactionIcon = (type: TransactionType): JSX.Element => {
-    switch (type) {
-      case "send":
-        return (
-          <MaterialCommunityIcons
-            name="tray-arrow-up"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-      case "receive":
-        return (
-          <MaterialCommunityIcons
-            name="tray-arrow-down"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-      case "fund":
-        return (
-          <MaterialCommunityIcons
-            name="currency-ngn"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-      default:
-        return (
-          <MaterialCommunityIcons
-            name="credit-card"
-            size={rs(18)}
-            color={tzColors.primary}
-          />
-        );
-    }
-  };
-
-  const getStatusColor = (status: TransactionStatus): string => {
-    switch (status) {
-      case "completed":
-        return "#22c55e";
-      case "delivered":
-        return "#22c55e";
-      case "refunded":
-        return "#06b6d4";
-      case "transit":
-        return "#f59e0b";
-      case "pending":
-        return "#6b7280";
-      case "accepted":
-        return "#3b82f6";
-      case "failed":
-        return "#ef4444";
-      default:
-        return "#6b7280";
-    }
-  };
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime: number = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) return "Today";
-    if (diffDays === 2) return "Yesterday";
-    if (diffDays <= 7) return `${diffDays - 1} days ago`;
-
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    });
-  };
-
-  const TransactionItem = ({
-    transaction,
-  }: {
-    transaction: Transaction;
-  }): JSX.Element => (
-    <TouchableOpacity
-      style={styles.transactionItem}
-      onPress={() => router.push(`/transactions/${transaction.id}`)}
-    >
-      <View style={styles.transactionIconContainer}>
-        <Text style={styles.transactionIcon}>
-          {getTransactionIcon(transaction.type)}
-        </Text>
-      </View>
-      <View style={styles.transactionDetails}>
-        <Text style={styles.transactionTitle}>{transaction.title}</Text>
-        <Text style={styles.transactionSubtitle}>{transaction.subtitle}</Text>
-        <View style={styles.transactionMeta}>
-          <Text style={styles.transactionDate}>
-            {formatDate(transaction.date)}
-          </Text>
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(transaction.status) },
-            ]}
-          >
-            <Text style={styles.statusText}>
-              {transaction.status.replace("_", " ")}
-            </Text>
-          </View>
-        </View>
-      </View>
-      <View style={styles.transactionRight}>
-        <Text
-          style={[
-            styles.transactionAmount,
-            transaction.amount > 0
-              ? styles.positiveAmount
-              : styles.negativeAmount,
-          ]}
-        >
-          {transaction.amount > 0 ? "+" : ""}₦
-          {Math.abs(transaction.amount).toLocaleString()}
-        </Text>
-        <MaterialCommunityIcons
-          name="chevron-right"
-          size={rs(16)}
-          color="#ccc"
-        />
-      </View>
-    </TouchableOpacity>
-  );
 
   const FilterButton = ({
     type,
@@ -349,12 +155,12 @@ export default function TransactionHistoryScreen(): JSX.Element {
       {loading ? (
         <ActivityIndicator size="large" color={tzColors.primary} />
       ) : (
-        <FlatList<Transaction>
+        <FlatList<MappedTransaction>
           data={transactions}
-          renderItem={({ item }: { item: Transaction }) => (
-            <TransactionItem transaction={item} />
+          renderItem={({ item }: { item: MappedTransaction }) => (
+            <TransactionItem transaction={item} showChevron />
           )}
-          keyExtractor={(item: Transaction) => item.id}
+          keyExtractor={(item: MappedTransaction) => item.id}
           style={styles.list}
           contentContainerStyle={styles.listContent}
           onEndReached={loadMoreTransactions}
@@ -440,86 +246,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: rs(18),
     paddingTop: rs(18),
-  },
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: rs(14),
-    borderRadius: rs(12),
-    marginBottom: rs(10),
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  transactionIconContainer: {
-    width: rs(40),
-    height: rs(40),
-    backgroundColor: "#f0fffe",
-    borderRadius: rs(20),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: rs(12),
-  },
-  transactionIcon: {
-    fontSize: rs(18),
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionTitle: {
-    fontSize: rs(14),
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: rs(4),
-  },
-  transactionSubtitle: {
-    fontSize: rs(12),
-    color: "#666",
-    marginBottom: rs(4),
-  },
-  transactionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  transactionDate: {
-    fontSize: rs(12),
-    color: "#999",
-    marginRight: rs(8),
-  },
-  statusBadge: {
-    paddingHorizontal: rs(6),
-    paddingVertical: rs(2),
-    borderRadius: rs(10),
-  },
-  statusText: {
-    fontSize: rs(10),
-    color: "#fff",
-    fontWeight: "600",
-    textTransform: "capitalize",
-  },
-  transactionRight: {
-    alignItems: "flex-end",
-  },
-  transactionAmount: {
-    fontSize: rs(16),
-    fontWeight: "600",
-    marginBottom: rs(4),
-  },
-  positiveAmount: {
-    color: "#22c55e",
-  },
-  negativeAmount: {
-    color: "#ef4444",
-  },
-  chevron: {
-    fontSize: rs(16),
-    color: "#ccc",
   },
   loadingMore: {
     flexDirection: "row",

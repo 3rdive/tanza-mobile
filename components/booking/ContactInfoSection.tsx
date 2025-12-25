@@ -61,8 +61,7 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
     }
   }, [showAddressBookModal, onSearchAddressBook, role]);
 
-  const hasContactInfo =
-    contactInfo.name || contactInfo.email || contactInfo.phone;
+  const hasContactInfo = contactInfo.phone;
 
   // Filter address book entries by role and search query
   const filteredEntries = addressBookEntries.filter((entry) => {
@@ -72,12 +71,10 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
     const query = searchQuery.toLowerCase();
     return (
       matchesRole &&
-      (entry.name.toLowerCase().includes(query) ||
-        entry.email.toLowerCase().includes(query) ||
+      ((entry.name && entry.name.toLowerCase().includes(query)) ||
         entry.phone.includes(query))
     );
   });
-
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
@@ -106,7 +103,7 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
           <Text style={styles.sectionTitle}>{title}</Text>
           {hasContactInfo && !isExpanded && (
             <Text style={styles.previewText} numberOfLines={1}>
-              {contactInfo.name || contactInfo.email || contactInfo.phone}
+              {contactInfo.phone}
             </Text>
           )}
         </View>
@@ -156,32 +153,6 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
           </View>
 
           {/* Input Fields */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter name"
-              value={contactInfo.name}
-              onChangeText={(text) => onUpdateField("name", text)}
-              placeholderTextColor="#999"
-              editable={!useMyInfoChecked}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email (optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter email"
-              value={contactInfo.email}
-              onChangeText={(text) => onUpdateField("email", text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor="#999"
-              editable={!useMyInfoChecked}
-            />
-          </View>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Phone</Text>
             <TextInput
@@ -234,7 +205,7 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
               />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by name, email, or phone"
+                placeholder="Search by name or phone"
                 value={searchQuery}
                 onChangeText={handleSearchChange}
                 placeholderTextColor="#999"
@@ -270,14 +241,19 @@ export const ContactInfoSection: React.FC<ContactInfoSectionProps> = ({
               >
                 {filteredEntries.map((entry, index) => (
                   <TouchableOpacity
-                    key={`${entry.email}-${index}`}
+                    key={`${entry.phone}-${index}`}
                     style={styles.entryItem}
                     onPress={() => handleSelectEntry(entry)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.entryName}>{entry.name}</Text>
-                    <Text style={styles.entryDetails}>{entry.email}</Text>
-                    <Text style={styles.entryDetails}>{entry.phone}</Text>
+                    {entry.name ? (
+                      <>
+                        <Text style={styles.entryName}>{entry.name}</Text>
+                        <Text style={styles.entryDetails}>{entry.phone}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.entryName}>{entry.phone}</Text>
+                    )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>

@@ -79,8 +79,7 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
       const query = searchQuery.toLowerCase();
       return (
         isRecipient &&
-        (entry.name.toLowerCase().includes(query) ||
-          entry.email?.toLowerCase().includes(query) ||
+        ((entry.name && entry.name.toLowerCase().includes(query)) ||
           entry.phone.includes(query))
       );
     });
@@ -125,18 +124,6 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
           </TouchableOpacity>
         </View>
 
-        {/* Name */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Name{isRequired ? " *" : ""}</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Recipient name"
-            placeholderTextColor="#999"
-            value={recipient.name}
-            onChangeText={(text) => onUpdateField(deliveryIndex, "name", text)}
-          />
-        </View>
-
         {/* Phone */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Phone{isRequired ? " *" : ""}</Text>
@@ -147,20 +134,6 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
             keyboardType="phone-pad"
             value={recipient.phone}
             onChangeText={(text) => onUpdateField(deliveryIndex, "phone", text)}
-          />
-        </View>
-
-        {/* Email */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Email (Optional)</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Recipient email"
-            placeholderTextColor="#999"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={recipient.email}
-            onChangeText={(text) => onUpdateField(deliveryIndex, "email", text)}
           />
         </View>
 
@@ -191,7 +164,7 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
                 <MaterialIcons name="search" size={rs(20)} color="#999" />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search by name, phone, or email"
+                  placeholder="Search by name or phone"
                   placeholderTextColor="#999"
                   value={searchQuery}
                   onChangeText={handleSearch}
@@ -223,11 +196,16 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
                       onPress={() => handleSelectEntry(entry)}
                     >
                       <View style={styles.entryInfo}>
-                        <Text style={styles.entryName}>{entry.name}</Text>
-                        <Text style={styles.entryDetails}>
-                          {entry.phone}
-                          {entry.email ? ` • ${entry.email}` : ""}
-                        </Text>
+                        {entry.name ? (
+                          <>
+                            <Text style={styles.entryName}>{entry.name}</Text>
+                            <Text style={styles.entryDetails}>
+                              {entry.phone}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text style={styles.entryName}>{entry.phone}</Text>
+                        )}
                       </View>
                       <MaterialIcons
                         name="chevron-right"

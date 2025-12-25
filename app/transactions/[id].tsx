@@ -5,8 +5,13 @@ import {
   type ITransactionDetail,
   type IUser,
 } from "@/lib/api";
-import { getStatusColor } from "@/lib/functions";
 import { tzColors } from "@/theme/color";
+import {
+  formatStatusText,
+  formatTransactionDate,
+  getStatusColor,
+  getTransactionStatus,
+} from "@/utils/transaction.utils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { JSX, useEffect, useState } from "react";
@@ -191,21 +196,7 @@ export default function TransactionDetail(): JSX.Element {
               {Math.abs(amountNum || 0).toLocaleString()}
             </Text>
             {(() => {
-              const tracking = (apiTx?.order as any)?.orderTracking as
-                | { status: string; createdAt: string }[]
-                | undefined;
-              let derived = "";
-              if (tracking && tracking.length > 0) {
-                // Use the most recent tracking status by createdAt
-                const last = tracking.reduce((a, b) =>
-                  new Date(a.createdAt) > new Date(b.createdAt) ? a : b
-                );
-                derived = String(last.status);
-              } else if ((apiTx as any)?.order?.orderStatus) {
-                derived = String((apiTx as any).order.orderStatus);
-              } else if (apiTx.status) {
-                derived = String(apiTx.status);
-              }
+              const derived = getTransactionStatus(apiTx);
               return (
                 <View
                   style={[
@@ -214,7 +205,7 @@ export default function TransactionDetail(): JSX.Element {
                   ]}
                 >
                   <Text style={styles.statusText}>
-                    {derived.replace(/_/g, " ")}
+                    {formatStatusText(derived)}
                   </Text>
                 </View>
               );
@@ -222,25 +213,9 @@ export default function TransactionDetail(): JSX.Element {
           </View>
         </View>
 
-        {apiTx?.order?.orderTracking &&
-          (() => {
-            const tracking = (apiTx?.order as any)?.orderTracking as
-              | { status: string; createdAt: string }[]
-              | undefined;
-            let derived = "";
-            if (tracking && tracking.length > 0) {
-              // Use the most recent tracking status by createdAt
-              const last = tracking.reduce((a, b) =>
-                new Date(a.createdAt) > new Date(b.createdAt) ? a : b
-              );
-              derived = String(last.status);
-            } else if ((apiTx as any)?.order?.orderStatus) {
-              derived = String((apiTx as any).order.orderStatus);
-            } else if (apiTx.status) {
-              derived = String(apiTx.status);
-            }
-            return <DeliveryProgress currentStatus={derived} />;
-          })()}
+        {apiTx?.order?.orderTracking && (
+          <DeliveryProgress currentStatus={getTransactionStatus(apiTx)} />
+        )}
 
         {/* Transaction Info */}
         <View style={styles.detailsCard}>
@@ -253,13 +228,13 @@ export default function TransactionDetail(): JSX.Element {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Date & Time</Text>
               <Text style={styles.detailValue}>
-                {new Date(apiTx.createdAt).toLocaleString()}
+                {formatTransactionDate(apiTx.createdAt, "long")}
               </Text>
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Status</Text>
               <Text style={styles.detailValue}>
-                {String(apiTx.status).replace(/_/g, " ")}
+                {formatStatusText(getTransactionStatus(apiTx))}
               </Text>
             </View>
             {apiTx.reference ? (
@@ -423,7 +398,7 @@ export default function TransactionDetail(): JSX.Element {
                     <View style={styles.detailRow}>
                       <Text style={styles.detailLabel}>Delivered At</Text>
                       <Text style={styles.detailValue}>
-                        {new Date(destination.deliveredAt).toLocaleString()}
+                        {formatTransactionDate(destination.deliveredAt, "long")}
                       </Text>
                     </View>
                   )}

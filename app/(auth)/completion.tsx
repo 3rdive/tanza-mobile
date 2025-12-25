@@ -43,6 +43,15 @@ export default function CompleteInfoScreen() {
   const [profilePic, setProfilePic] = useState<string>("");
   const { setUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Track touched fields for validation
+  const [touched, setTouched] = useState({
+    fullName: false,
+    password: false,
+    profilePic: true, // Show profile pic error by default
+    address: false,
+  });
   const [addressText, setAddressText] = useState("");
   const [addressCoords, setAddressCoords] = useState<{
     lat: number;
@@ -51,6 +60,7 @@ export default function CompleteInfoScreen() {
   const [addrSuggestions, setAddrSuggestions] = useState<
     {
       id: string;
+      placeId?: string;
       title: string;
       subtitle: string;
       lat?: number;
@@ -79,7 +89,42 @@ export default function CompleteInfoScreen() {
     );
   };
 
+  // Validation error getters
+  const getFullNameError = () => {
+    if (!touched.fullName) return "";
+    if (!fullName.trim()) return "Full name is required";
+    if (!hasTwoWords(fullName)) return "Please enter both first and last name";
+    return "";
+  };
+
+  const getPasswordError = () => {
+    if (!touched.password) return "";
+    if (!password) return "Password is required";
+    if (password.length < 8) return "Password must be at least 8 characters";
+    return "";
+  };
+
+  const getProfilePicError = () => {
+    if (!touched.profilePic) return "";
+    if (!profilePic) return "Profile photo is required";
+    return "";
+  };
+
+  const getAddressError = () => {
+    if (!touched.address) return "";
+    if (!addressText) return "Address is required";
+    if (!addressCoords) return "Please select a valid address from suggestions";
+    return "";
+  };
+
   const handleComplete = async () => {
+    // Mark all fields as touched to show validation
+    setTouched({
+      fullName: true,
+      password: true,
+      profilePic: true,
+      address: true,
+    });
     if (!isFormValid()) {
       Alert.alert("Invalid Information", "Please fill all fields correctly");
       return;
@@ -137,20 +182,26 @@ export default function CompleteInfoScreen() {
       const mapped = features.map((f) => {
         const p = f.properties || ({} as any);
         const g = f.geometry || ({} as any);
-        const parts: string[] = [];
-        if (p.street) parts.push(p.street);
-        if (p.city) parts.push(p.city);
-        if (p.state) parts.push(p.state);
-        if (p.country) parts.push(p.country);
-        if (p.postcode) parts.push(p.postcode);
-        const subtitle = parts.filter(Boolean).join(", ");
+
+        let subtitle = p.description;
+        if (!subtitle) {
+          const parts: string[] = [];
+          if (p.street) parts.push(p.street);
+          if (p.city) parts.push(p.city);
+          if (p.state) parts.push(p.state);
+          if (p.country) parts.push(p.country);
+          if (p.postcode) parts.push(p.postcode);
+          subtitle = parts.filter(Boolean).join(", ");
+        }
+
         const title = p.name || subtitle || `${p.type || "Location"}`;
         return {
           id: `${p.osm_type || ""}_${
             p.osm_id || Math.random().toString(36).slice(2)
           }`,
+          placeId: p.placeId,
           title,
-          subtitle,
+          subtitle: subtitle || "",
           lon: g?.coordinates?.[0],
           lat: g?.coordinates?.[1],
         };
@@ -163,15 +214,37 @@ export default function CompleteInfoScreen() {
     }
   };
 
-  const selectAddress = (s: {
+  const selectAddress = async (s: {
     title: string;
     subtitle: string;
     lat?: number;
     lon?: number;
+    placeId?: string;
   }) => {
-    const text = s.title || s.subtitle || "";
+    let lat = s.lat;
+    let lon = s.lon;
+    let title = s.title;
+    let subtitle = s.subtitle;
+
+    if (s.placeId) {
+      try {
+        const detailsRes = await locationService.getPlaceDetails(s.placeId);
+        if (detailsRes.success && detailsRes.data) {
+          const d = detailsRes.data;
+          lat = d.latitude;
+          lon = d.longitude;
+          title = d.name || title;
+          subtitle = d.description || subtitle;
+        }
+      } catch (e) {
+        Alert.alert("Error", "Failed to get location details");
+        return;
+      }
+    }
+
+    const text = title || subtitle || "";
     setAddressText(text);
-    setAddressCoords(s.lat && s.lon ? { lat: s.lat, lon: s.lon } : null);
+    setAddressCoords(lat && lon ? { lat, lon } : null);
     setShowAddrSuggestions(false);
   };
 
@@ -272,6 +345,7 @@ export default function CompleteInfoScreen() {
               </View>
               <TouchableOpacity
                 style={styles.selectPhotoBtn}
+                disabled={uploadingPhoto}
                 onPress={async () => {
                   try {
                     const perm =
@@ -291,21 +365,30 @@ export default function CompleteInfoScreen() {
                     });
                     if (result.canceled) return;
                     const uri = result.assets?.[0]?.uri;
+                    const fileSize = result.assets?.[0]?.fileSize;
                     if (!uri) return;
-                    // Optimistic: show local image while uploading
-                    // We'll upload and replace with the server URL when done
-                    let uploadingAlertShown = false;
-                    const timer = setTimeout(() => {
-                      uploadingAlertShown = true;
-                    }, 400);
+
+                    // Check file size (3MB limit)
+                    const maxSizeInBytes = 3 * 1024 * 1024; // 3MB
+                    if (fileSize && fileSize > maxSizeInBytes) {
+                      Alert.alert(
+                        "File too large",
+                        "Please select an image smaller than 3MB"
+                      );
+                      return;
+                    }
+
+                    setUploadingPhoto(true);
                     const resp = await storageService.upload({
                       uri,
                       type: "image/jpeg",
                     });
-                    clearTimeout(timer);
                     if (resp?.success) {
                       const url = (resp.data as any)?.url;
-                      if (url) setProfilePic(url);
+                      if (url) {
+                        setProfilePic(url);
+                        setTouched((prev) => ({ ...prev, profilePic: true }));
+                      }
                     } else {
                       Alert.alert(
                         "Upload failed",
@@ -319,40 +402,50 @@ export default function CompleteInfoScreen() {
                         e?.message ||
                         "Unable to upload image"
                     );
+                  } finally {
+                    setUploadingPhoto(false);
                   }
                 }}
               >
-                <Text style={styles.selectPhotoBtnText}>Select Photo</Text>
+                {uploadingPhoto ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.selectPhotoBtnText}>Select Photo</Text>
+                )}
               </TouchableOpacity>
             </View>
-            {/*<Text style={styles.helperText}>Image will be uploaded and linked to your account.</Text>*/}
+            {getProfilePicError() && (
+              <Text style={styles.errorText}>{getProfilePicError()}</Text>
+            )}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full name</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Enter your full name (first and last)"
+              style={[styles.input, getFullNameError() && styles.errorInput]}
               value={fullName}
               onChangeText={setFullName}
+              onBlur={() => setTouched((prev) => ({ ...prev, fullName: true }))}
               autoCapitalize="words"
             />
-            <Text style={styles.helperText}>
-              Enter at least first and last name
-            </Text>
+            {getFullNameError() && (
+              <Text style={styles.errorText}>{getFullNameError()}</Text>
+            )}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Create a password"
+              style={[styles.input, getPasswordError() && styles.errorInput]}
               value={password}
               onChangeText={setPassword}
+              onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
               secureTextEntry
               autoCapitalize="none"
             />
-            <Text style={styles.helperText}>Minimum 8 characters</Text>
+            {getPasswordError() && (
+              <Text style={styles.errorText}>{getPasswordError()}</Text>
+            )}
           </View>
 
           {/* Address input with autocomplete and current location */}
@@ -360,15 +453,15 @@ export default function CompleteInfoScreen() {
             <Text style={styles.label}>Your Address</Text>
             <View style={styles.inputWrapper}>
               <TextInput
-                style={styles.input}
-                placeholder="Search address (e.g., Victoria Island)"
+                style={[styles.input, getAddressError() && styles.errorInput]}
                 value={addressText}
-                onFocus={() =>
+                onFocus={() => {
+                  setTouched((prev) => ({ ...prev, address: true }));
                   router.push({
                     pathname: "/location-search",
                     params: { context: "usersAddress" },
-                  })
-                }
+                  });
+                }}
                 showSoftInputOnFocus={false}
                 caretHidden
                 autoCapitalize="sentences"
@@ -396,6 +489,9 @@ export default function CompleteInfoScreen() {
                 Use current location
               </Text>
             </TouchableOpacity>
+            {getAddressError() && (
+              <Text style={styles.errorText}>{getAddressError()}</Text>
+            )}
 
             {showAddrSuggestions && addrSuggestions.length > 0 && (
               <View style={styles.suggestionBox}>
@@ -497,6 +593,7 @@ const styles = StyleSheet.create({
   },
   errorInput: {
     borderColor: "#ff4444",
+    borderWidth: rs(2),
   },
   helperText: {
     fontSize: rs(14),

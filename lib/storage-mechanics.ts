@@ -42,7 +42,7 @@ export class StorageMechanics {
     try {
       await StorageMechanics.set(
         StorageKeys.PUSH_NOTIFICATION_LAST_REGISTERED,
-        timestamp,
+        timestamp
       );
     } catch (e) {
       // ignore storage errors
@@ -52,7 +52,7 @@ export class StorageMechanics {
   static async getLastPushRegistration(): Promise<number | null> {
     try {
       const v = await StorageMechanics.get(
-        StorageKeys.PUSH_NOTIFICATION_LAST_REGISTERED,
+        StorageKeys.PUSH_NOTIFICATION_LAST_REGISTERED
       );
       if (v == null) return null;
       const num = typeof v === "number" ? v : Number(v);
@@ -67,7 +67,7 @@ export class StorageMechanics {
    * Defaults to once every `intervalInDays` days (7 by default).
    */
   static async shouldUpdatePushRegistration(
-    intervalInDays = 7,
+    intervalInDays = 7
   ): Promise<boolean> {
     try {
       const last = await StorageMechanics.getLastPushRegistration();
@@ -87,4 +87,5 @@ export enum StorageKeys {
   USER = "user",
   HAS_ONBOARDING_COMPLETED = "has-onboarding-completed",
   PUSH_NOTIFICATION_LAST_REGISTERED = "push-notification-last-registered",
+  CURRENT_LOCATION_CACHE = "current-location-cache",
 }

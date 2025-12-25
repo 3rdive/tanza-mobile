@@ -13,9 +13,11 @@ const defaultFormData: BookingFormData = {
   numberOfItems: 1,
   urgencyFee: 0,
   pickupIsCurrentLocation: false,
+  isCashPayment: false,
+  retrieveCash: false,
+  cashAmountToReceive: 0,
+  _pickupExpanded: true,
   sender: {
-    name: "",
-    email: "",
     phone: "",
   },
   deliveryLocations: [
@@ -24,10 +26,9 @@ const defaultFormData: BookingFormData = {
       coordinates: null,
       isCurrentLocation: false,
       recipient: {
-        name: "",
-        email: "",
         phone: "",
       },
+      _expanded: true,
     },
   ],
 };
@@ -79,10 +80,9 @@ export const useBookingForm = () => {
           coordinates: null,
           isCurrentLocation: false,
           recipient: {
-            name: "",
-            email: "",
             phone: "",
           },
+          _expanded: true,
         },
       ],
     }));

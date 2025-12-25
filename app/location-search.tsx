@@ -32,9 +32,11 @@ export default function LocationSearchScreen() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [results, setResults] = useState<
     {
       id: string;
+      placeId?: string;
       title: string;
       subtitle: string;
       lat?: number;
@@ -68,20 +70,26 @@ export default function LocationSearchScreen() {
       const mapped = features.map((f) => {
         const p = f.properties || ({} as any);
         const g = f.geometry || ({} as any);
-        const parts: string[] = [];
-        if (p.street) parts.push(p.street);
-        if (p.city) parts.push(p.city);
-        if (p.state) parts.push(p.state);
-        if (p.country) parts.push(p.country);
-        if (p.postcode) parts.push(p.postcode);
-        const subtitle = parts.filter(Boolean).join(", ");
+
+        let subtitle = p.description;
+        if (!subtitle) {
+          const parts: string[] = [];
+          if (p.street) parts.push(p.street);
+          if (p.city) parts.push(p.city);
+          if (p.state) parts.push(p.state);
+          if (p.country) parts.push(p.country);
+          if (p.postcode) parts.push(p.postcode);
+          subtitle = parts.filter(Boolean).join(", ");
+        }
+
         const title = p.name || subtitle || `${p.type || "Location"}`;
         return {
           id: `${p.osm_type || ""}_${
             p.osm_id || Math.random().toString(36).slice(2)
           }`,
+          placeId: p.placeId,
           title,
-          subtitle,
+          subtitle: subtitle || "",
           lon: g?.coordinates?.[0],
           lat: g?.coordinates?.[1],
         };
@@ -171,22 +179,51 @@ export default function LocationSearchScreen() {
     }
   };
 
-  const handleSelect = (item: {
+  const handleSelect = async (item: {
+    id: string;
     title: string;
     subtitle: string;
     lat?: number;
     lon?: number;
+    placeId?: string;
   }) => {
+    if (resolvingId) return;
+
+    let lat = item.lat;
+    let lon = item.lon;
+    let title = item.title;
+    let subtitle = item.subtitle;
+
+    if (item.placeId) {
+      try {
+        setResolvingId(item.id);
+        const detailsRes = await locationService.getPlaceDetails(item.placeId);
+        if (detailsRes.success && detailsRes.data) {
+          const d = detailsRes.data;
+          lat = d.latitude;
+          lon = d.longitude;
+          title = d.name || title;
+          subtitle = d.description || subtitle;
+        }
+      } catch (error) {
+        console.error("Failed to fetch place details", error);
+        Alert.alert("Error", "Could not retrieve location details.");
+        setResolvingId(null);
+        return;
+      }
+    }
+
     dispatch(
       setSelectedLocation({
-        title: item.title || item.subtitle,
-        subtitle: item.subtitle,
-        lat: item.lat,
-        lon: item.lon,
+        title: title || subtitle,
+        subtitle: subtitle,
+        lat: lat,
+        lon: lon,
         context: String(context || ""),
         isCurrentLocation: false,
       })
     );
+    setResolvingId(null);
     router.back();
   };
 
@@ -258,12 +295,25 @@ export default function LocationSearchScreen() {
             results.map((r, key) => (
               <TouchableOpacity
                 key={key}
-                style={styles.item}
+                style={[
+                  styles.item,
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  },
+                ]}
                 onPress={() => handleSelect(r)}
+                disabled={!!resolvingId}
               >
-                <Text style={styles.itemTitle}>{r.title}</Text>
-                {!!r.subtitle && (
-                  <Text style={styles.itemSubtitle}>{r.subtitle}</Text>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={styles.itemTitle}>{r.title}</Text>
+                  {!!r.subtitle && (
+                    <Text style={styles.itemSubtitle}>{r.subtitle}</Text>
+                  )}
+                </View>
+                {resolvingId === r.id && (
+                  <ActivityIndicator size="small" color="#00B624" />
                 )}
               </TouchableOpacity>
             ))}

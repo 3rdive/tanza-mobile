@@ -7,10 +7,10 @@ import {
 
 /**
  * Validate if contact info is completely filled
- * Email is optional, only name and phone are required
+ * Only phone is required
  */
 export const isValidContactInfo = (contact: ContactInfo): boolean => {
-  return !!(contact.name.trim() && contact.phone.trim());
+  return !!contact.phone.trim();
 };
 
 /**
@@ -76,9 +76,9 @@ export const hasDuplicateRecipients = (
 ): boolean => {
   if (deliveryLocations.length <= 1) return false;
 
-  const phones = deliveryLocations.map((d) =>
-    d.recipient.phone.trim().toLowerCase()
-  );
+  const phones = deliveryLocations
+    .map((d) => d.recipient.phone.trim().toLowerCase())
+    .filter((phone) => phone);
   return new Set(phones).size !== phones.length;
 };
 
