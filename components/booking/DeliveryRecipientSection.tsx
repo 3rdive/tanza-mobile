@@ -29,6 +29,7 @@ interface DeliveryRecipientSectionProps {
   onSelectFromAddressBook: (index: number, entry: any) => void;
   isRequired?: boolean;
   totalDeliveries?: number;
+  error?: string;
 }
 
 export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
@@ -42,6 +43,7 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
     onSelectFromAddressBook,
     isRequired = true,
     totalDeliveries = 1,
+    error,
   }) => {
     const [showAddressBook, setShowAddressBook] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -128,13 +130,14 @@ export const DeliveryRecipientSection = memo<DeliveryRecipientSectionProps>(
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Phone{isRequired ? " *" : ""}</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, error ? styles.inputError : null]}
             placeholder="Recipient phone"
             placeholderTextColor="#999"
             keyboardType="phone-pad"
             value={recipient.phone}
             onChangeText={(text) => onUpdateField(deliveryIndex, "phone", text)}
           />
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
 
         {/* Address Book Modal */}
@@ -358,5 +361,15 @@ const styles = StyleSheet.create({
   entryDetails: {
     fontSize: rs(14),
     color: "#666",
+  },
+  inputError: {
+    borderColor: "#ff4444",
+    borderWidth: 1,
+  },
+  errorText: {
+    fontSize: rs(12),
+    color: "#ff4444",
+    marginTop: rs(4),
+    marginLeft: rs(4),
   },
 });

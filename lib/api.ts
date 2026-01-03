@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
 //https://api.delivery.herlay.com
-export const BASE_URL = "https://demagogic-toby-glamourously.ngrok-free.dev";
+export const BASE_URL = "https://api.delivery.herlay.com";
 export const AXIOS: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
@@ -422,6 +422,8 @@ export interface IOrderData {
   declinedRiderIds?: string[];
   distanceInKm?: number;
   isUrgent?: boolean;
+  isCashPayment?: boolean;
+  cashAmountToReceive?: number;
 }
 
 export interface ITransactionDetail {
@@ -584,7 +586,7 @@ export const orderService = {
     isUrgent: boolean;
     urgencyFee?: number;
     isCashPayment?: boolean;
-    cashPaymentAmount?: number;
+    cashAmountToReceive?: number;
   }) => {
     const { data } = await AXIOS.post<IApiResponse<IOrderData>>(
       "/api/v1/order/multiple-delivery",

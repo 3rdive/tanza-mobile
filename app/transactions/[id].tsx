@@ -291,6 +291,23 @@ export default function TransactionDetail(): JSX.Element {
               </Text>
             </View>
 
+            {order.isCashPayment && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Payment Method</Text>
+                <Text style={styles.detailValue}>Pay on Delivery (Cash)</Text>
+              </View>
+            )}
+
+            {order.cashAmountToReceive !== undefined &&
+              order.cashAmountToReceive > 0 && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Cash to Receive</Text>
+                  <Text style={styles.detailValue}>
+                    ₦{Number(order.cashAmountToReceive).toLocaleString()}
+                  </Text>
+                </View>
+              )}
+
             <View style={styles.separator} />
             <Text style={styles.subSectionTitle}>Contact Information</Text>
             <View style={styles.detailRow}>

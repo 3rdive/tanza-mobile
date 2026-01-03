@@ -22,10 +22,7 @@ import {
 } from "@/redux/hooks/hooks";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { Coordinates } from "@/types/booking.types";
-import {
-  canSubmitBooking,
-  hasDuplicateRecipients,
-} from "@/utils/booking.utils";
+import { hasDuplicateRecipients } from "@/utils/booking.utils";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -61,6 +58,7 @@ export default function BookLogisticsScreen() {
   const { user } = useUser();
   const { balance, setWallet } = useWallet();
   const [isFetchingWallet, setIsFetchingWallet] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   // Booking form + animations
   const {
@@ -111,7 +109,6 @@ export default function BookLogisticsScreen() {
     isLoadingAddressBook,
     useSenderMyInfo,
     handleUseSenderMyInfo,
-    handleSelectSenderFromAddressBook,
     handleSearchAddressBook,
   } = useBookOrder({
     user,
@@ -310,47 +307,22 @@ export default function BookLogisticsScreen() {
   ]);
 
   const handleBooking = useCallback(async () => {
-    if (!formData.pickupLocation || !pickupCoords) {
-      Alert.alert(
-        "Missing Information",
-        "Please select pickup location from the suggestions"
-      );
-      return;
-    }
+    setShowErrors(true);
 
-    // Validate deliveries
-    const validDeliveries = formData.deliveryLocations.filter(
-      (d) => d.address && d.coordinates
+    const isPickupValid = !!formData.pickupLocation && !!pickupCoords;
+    const isSenderValid = !!formData.sender.phone;
+
+    // Check if all deliveries are valid.
+    // User requested phone number to be required for drop off as well.
+    const areDeliveriesValid = formData.deliveryLocations.every(
+      (d) => d.address && d.coordinates && d.recipient.phone
     );
 
-    if (validDeliveries.length === 0) {
+    if (!isPickupValid || !isSenderValid || !areDeliveriesValid) {
       Alert.alert(
         "Missing Information",
-        "Please add at least one delivery location"
+        "Please fill in all required fields highlighted in red."
       );
-      return;
-    }
-
-    // Check all recipients have required info
-    const incompleteRecipient = formData.deliveryLocations.find((d) => {
-      if (formData.deliveryLocations.length === 1) {
-        // For single delivery, only address is required
-        return !d.address || !d.coordinates;
-      } else {
-        // For multiple deliveries, phone is required
-        return !d.recipient.phone || !d.address || !d.coordinates;
-      }
-    });
-
-    if (incompleteRecipient) {
-      if (formData.deliveryLocations.length === 1) {
-        Alert.alert("Missing Information", "Please select a drop-off address");
-      } else {
-        Alert.alert(
-          "Missing Recipient Information",
-          "Please fill in phone number for all recipients"
-        );
-      }
       return;
     }
 
@@ -359,14 +331,6 @@ export default function BookLogisticsScreen() {
       Alert.alert(
         "Duplicate Recipients",
         "You cannot send to the same recipient twice. Please use unique recipients for each delivery."
-      );
-      return;
-    }
-
-    if (!formData.sender.phone) {
-      Alert.alert(
-        "Missing Sender Information",
-        "Please fill in sender's phone number"
       );
       return;
     }
@@ -387,6 +351,7 @@ export default function BookLogisticsScreen() {
       return;
     }
 
+    const validDeliveries = formData.deliveryLocations;
     const deliveryCount = validDeliveries.length;
     const deliveryText =
       deliveryCount === 1 ? "1 delivery" : `${deliveryCount} deliveries`;
@@ -406,7 +371,7 @@ export default function BookLogisticsScreen() {
                   phone: formData.sender.phone,
                 },
                 pickUpAddress: formData.pickupLocation,
-                pickUpCoordinates: [pickupCoords.lon, pickupCoords.lat],
+                pickUpCoordinates: [pickupCoords!.lon, pickupCoords!.lat],
                 deliveryLocations: validDeliveries.map((d) => ({
                   address: d.address,
                   coordinates: [d.coordinates!.lon, d.coordinates!.lat],
@@ -430,6 +395,7 @@ export default function BookLogisticsScreen() {
                     text: "OK",
                     onPress: () => {
                       clearAllStates();
+                      setShowErrors(false);
                       router.push("/(tabs)/history?refresh=true");
                     },
                   },
@@ -487,16 +453,6 @@ export default function BookLogisticsScreen() {
     setIsBooking,
     clearAllStates,
   ]);
-
-  const isSubmitDisabled = !canSubmitBooking(
-    formData.pickupLocation,
-    pickupCoords,
-    formData.deliveryLocations,
-    calculatedPrice,
-    isCalculating,
-    isBooking,
-    formData.sender
-  );
 
   const isUrgentDisabled =
     !formData.pickupLocation ||
@@ -579,10 +535,18 @@ export default function BookLogisticsScreen() {
                 {formData._pickupExpanded && (
                   <View style={styles.collapsibleContent}>
                     <View style={styles.locationInputContainer}>
-                      <Text style={styles.inputLabel}>Pickup Location</Text>
+                      <Text style={styles.inputLabel}>
+                        Pickup Location{" "}
+                        <Text style={styles.requiredAsterisk}>*</Text>
+                      </Text>
                       <View style={styles.inputWrapper}>
                         <TextInput
-                          style={styles.locationInput}
+                          style={[
+                            styles.locationInput,
+                            showErrors &&
+                              !formData.pickupLocation &&
+                              styles.inputError,
+                          ]}
                           value={formData.pickupLocation}
                           onFocus={() => {
                             const deliveryIndices = formData.deliveryLocations
@@ -619,13 +583,26 @@ export default function BookLogisticsScreen() {
                           </TouchableOpacity>
                         )}
                       </View>
+                      {showErrors && !formData.pickupLocation && (
+                        <Text style={styles.errorText}>
+                          Pickup location is required
+                        </Text>
+                      )}
                     </View>
 
                     <View style={styles.senderInfoContainer}>
-                      <Text style={styles.inputLabel}>Sender Phone Number</Text>
+                      <Text style={styles.inputLabel}>
+                        Sender Phone Number{" "}
+                        <Text style={styles.requiredAsterisk}>*</Text>
+                      </Text>
                       <View style={styles.inputWrapper}>
                         <TextInput
-                          style={styles.locationInput}
+                          style={[
+                            styles.locationInput,
+                            showErrors &&
+                              !formData.sender.phone &&
+                              styles.inputError,
+                          ]}
                           value={formData.sender.phone}
                           onChangeText={(text) =>
                             updateSenderField("phone", text)
@@ -635,6 +612,11 @@ export default function BookLogisticsScreen() {
                           placeholderTextColor="#999"
                         />
                       </View>
+                      {showErrors && !formData.sender.phone && (
+                        <Text style={styles.errorText}>
+                          Sender phone number is required
+                        </Text>
+                      )}
                       <TouchableOpacity
                         style={styles.useMyInfoButton}
                         onPress={handleUseSenderMyInfo}
@@ -740,10 +722,18 @@ export default function BookLogisticsScreen() {
                     <View style={styles.collapsibleContent}>
                       {/* Location Input */}
                       <View style={styles.locationInputContainer}>
-                        <Text style={styles.inputLabel}>Drop-off Address</Text>
+                        <Text style={styles.inputLabel}>
+                          Drop-off Address{" "}
+                          <Text style={styles.requiredAsterisk}>*</Text>
+                        </Text>
                         <View style={styles.inputWrapper}>
                           <TextInput
-                            style={styles.locationInput}
+                            style={[
+                              styles.locationInput,
+                              showErrors &&
+                                !delivery.address &&
+                                styles.inputError,
+                            ]}
                             value={delivery.address}
                             onFocus={() => {
                               const deliveryIndices = formData.deliveryLocations
@@ -782,6 +772,11 @@ export default function BookLogisticsScreen() {
                             </TouchableOpacity>
                           )}
                         </View>
+                        {showErrors && !delivery.address && (
+                          <Text style={styles.errorText}>
+                            Drop-off address is required
+                          </Text>
+                        )}
                       </View>
 
                       {/* Recipient Info */}
@@ -797,6 +792,11 @@ export default function BookLogisticsScreen() {
                         }
                         isRequired={formData.deliveryLocations.length > 1}
                         totalDeliveries={formData.deliveryLocations.length}
+                        error={
+                          showErrors && !delivery.recipient.phone
+                            ? "Phone number is required"
+                            : undefined
+                        }
                       />
                     </View>
                   )}
@@ -1005,7 +1005,7 @@ export default function BookLogisticsScreen() {
           priceBreakdown={priceBreakdown}
           isCalculating={isCalculating}
           isBooking={isBooking}
-          disabled={isSubmitDisabled}
+          disabled={isBooking}
           onBook={handleBooking}
         />
 
@@ -1090,6 +1090,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e0e0e0",
     paddingRight: rs(45),
+  },
+  inputError: {
+    borderColor: "#ff4444",
+    borderWidth: 1,
+  },
+  errorText: {
+    fontSize: rs(12),
+    color: "#ff4444",
+    marginTop: rs(4),
+    marginLeft: rs(4),
+  },
+  requiredAsterisk: {
+    color: "#ff4444",
   },
   clearButton: {
     position: "absolute",

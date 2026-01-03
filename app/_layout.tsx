@@ -7,7 +7,7 @@ import {
   Poppins_700Bold,
   useFonts,
 } from "@expo-google-fonts/poppins";
-import { SplashScreen, Stack } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo } from "react";
 import { Text, TextInput } from "react-native";
@@ -65,7 +65,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ReduxProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
         <AuthStack>
           <Stack
             screenOptions={{

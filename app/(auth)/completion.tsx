@@ -44,6 +44,7 @@ export default function CompleteInfoScreen() {
   const { setUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [initializing, setInitializing] = useState(false);
 
   // Track touched fields for validation
   const [touched, setTouched] = useState({
@@ -154,8 +155,11 @@ export default function CompleteInfoScreen() {
       };
       const resp = await authService.signUp(payload);
       if (resp.success) {
-        await setUser(resp.data);
-        Alert.alert("Success", "Account created successfully!");
+        setIsLoading(false);
+        setInitializing(true);
+        setTimeout(async () => {
+          await setUser(resp.data);
+        }, 2000);
       } else {
         Alert.alert("Sign up failed", resp.message || "Please try again");
       }
@@ -536,6 +540,16 @@ export default function CompleteInfoScreen() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Initializing overlay */}
+      {initializing && (
+        <View style={styles.initializingOverlay}>
+          <View style={styles.initializingCard}>
+            <ActivityIndicator size="large" color="#000" />
+            <Text style={styles.initializingText}>Initializing account...</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -731,5 +745,33 @@ const styles = StyleSheet.create({
     fontSize: rs(18),
     color: "#999",
     fontWeight: "600",
+  },
+  initializingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  initializingCard: {
+    backgroundColor: "#fff",
+    padding: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  initializingText: {
+    marginTop: 16,
+    fontSize: rs(18),
+    fontWeight: "600",
+    color: "#000",
   },
 });

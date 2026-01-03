@@ -6,6 +6,7 @@ const getSocketUrl = () => {
   try {
     const url = new URL(BASE_URL);
     const finalurl = `${url.hostname}:3006`;
+    // const finalurl = `0.tcp.eu.ngrok.io:19106`;
     console.log({ finalurl });
     return finalurl;
   } catch {
