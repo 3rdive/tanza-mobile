@@ -1,6 +1,7 @@
 // NewPasswordScreen.tsx
 import { authService } from "@/lib/api";
 import { usePasswordResetFlow } from "@/redux/hooks/hooks";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -125,9 +126,11 @@ export default function NewPasswordScreen() {
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
                   >
-                    <Text style={styles.eyeText}>
-                      {showPassword ? "👁️" : "👁️‍🗨️"}
-                    </Text>
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={rs(24)}
+                      color="#666"
+                    />
                   </TouchableOpacity>
                 </View>
                 <Text
@@ -159,9 +162,13 @@ export default function NewPasswordScreen() {
                     style={styles.eyeButton}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    <Text style={styles.eyeText}>
-                      {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
-                    </Text>
+                    <Ionicons
+                      name={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={rs(24)}
+                      color="#666"
+                    />
                   </TouchableOpacity>
                 </View>
                 {confirmPassword && !doPasswordsMatch && (

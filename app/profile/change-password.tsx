@@ -1,4 +1,5 @@
 import { userService } from "@/lib/api";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -23,6 +24,9 @@ export default function ChangePasswordScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const validate = () => {
     if (!currentPassword) {
@@ -110,38 +114,78 @@ export default function ChangePasswordScreen() {
           <View style={styles.formSection}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Current Password</Text>
-              <TextInput
-                style={styles.input}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="Enter current password"
-                secureTextEntry
-                editable={!loading}
-              />
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Enter current password"
+                  secureTextEntry={!showCurrentPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  <Ionicons
+                    name={
+                      showCurrentPassword ? "eye-off-outline" : "eye-outline"
+                    }
+                    size={rs(24)}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>New Password</Text>
-              <TextInput
-                style={styles.input}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Enter new password"
-                secureTextEntry
-                editable={!loading}
-              />
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password"
+                  secureTextEntry={!showNewPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                >
+                  <Ionicons
+                    name={showNewPassword ? "eye-off-outline" : "eye-outline"}
+                    size={rs(24)}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Confirm New Password</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Re-enter new password"
-                secureTextEntry
-                editable={!loading}
-              />
+              <View style={styles.passwordInputContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Re-enter new password"
+                  secureTextEntry={!showConfirmPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons
+                    name={
+                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                    }
+                    size={rs(24)}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -195,5 +239,26 @@ const styles = StyleSheet.create({
     paddingVertical: rs(16),
     fontSize: rs(16),
     backgroundColor: "#fff",
+  },
+  passwordInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
+  },
+  passwordInput: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    borderRadius: rs(12),
+    paddingHorizontal: 16,
+    paddingRight: rs(48),
+    paddingVertical: rs(16),
+    fontSize: rs(16),
+    backgroundColor: "#fff",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: rs(12),
+    padding: rs(8),
   },
 });

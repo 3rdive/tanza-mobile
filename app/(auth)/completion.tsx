@@ -14,7 +14,7 @@ import {
   useUser,
 } from "@/redux/hooks/hooks";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -40,6 +40,7 @@ export default function CompleteInfoScreen() {
   const { email, mobile, otp } = useAuthFlow();
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [profilePic, setProfilePic] = useState<string>("");
   const { setUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
@@ -439,14 +440,31 @@ export default function CompleteInfoScreen() {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={[styles.input, getPasswordError() && styles.errorInput]}
-              value={password}
-              onChangeText={setPassword}
-              onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                style={[
+                  styles.passwordInput,
+                  getPasswordError() && styles.errorInput,
+                ]}
+                value={password}
+                onChangeText={setPassword}
+                onBlur={() =>
+                  setTouched((prev) => ({ ...prev, password: true }))
+                }
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={rs(24)}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            </View>
             {getPasswordError() && (
               <Text style={styles.errorText}>{getPasswordError()}</Text>
             )}
@@ -731,6 +749,26 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     position: "relative",
+  },
+  passwordInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: rs(18),
+    backgroundColor: "#f2f2f2",
+    paddingVertical: rs(16),
+    paddingHorizontal: rs(16),
+    paddingRight: rs(48),
+    borderRadius: rs(12),
+    color: "#000",
+  },
+  eyeIcon: {
+    position: "absolute",
+    right: rs(12),
+    padding: rs(8),
   },
   clearBtn: {
     position: "absolute",
