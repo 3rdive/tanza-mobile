@@ -4,8 +4,9 @@ import { BASE_URL } from "./api";
 // Extract the host from BASE_URL and use port 3006 for socket connection
 const getSocketUrl = () => {
   try {
-    const url = new URL(BASE_URL);
-    const finalurl = `${url.hostname}:3006`;
+    const port = process.env.EXPO_PUBLIC_SOCKET_PORT;
+    const url = new URL(BASE_URL!);
+    const finalurl = `${url.hostname}:${port}`;
     // const finalurl = `0.tcp.eu.ngrok.io:19106`;
     console.log({ finalurl });
     return finalurl;
